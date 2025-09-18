@@ -1,0 +1,33 @@
+# Use the official Golang image as the build image
+FROM golang:1.25-alpine AS builder
+
+# Set the current working directory inside the container
+WORKDIR /app
+
+# Copy the Go module files and download dependencies
+COPY go.mod go.sum ./
+RUN go mod tidy
+
+# Copy the rest of the application source code into the container
+COPY . .
+
+# Build the Go application
+RUN go build -o leetcode-spaced-repetition-api applications/main.go
+
+# Use a smaller image for the runtime environment
+FROM alpine:latest
+
+# Install necessary dependencies for running the Go application
+RUN apk --no-cache add ca-certificates
+
+# Set the working directory for the runtime container
+WORKDIR /root/
+
+# Copy the compiled Go binary from the builder image
+COPY --from=builder /app/leetcode-spaced-repetition-api .
+
+# Expose the port that the application will run on
+EXPOSE 8080
+
+# Define the command to run the application
+CMD ["./leetcode-spaced-repetition-api"]
