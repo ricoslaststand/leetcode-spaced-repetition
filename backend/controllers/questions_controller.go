@@ -1,7 +1,10 @@
 package controllers
 
 import (
+	"fmt"
+	"leetcode-spaced-repetition/services"
 	"regexp"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -29,29 +32,69 @@ var validDate validator.Func = func(fl validator.FieldLevel) bool {
 	return match
 }
 
-func RegisterRoutes(r *gin.Engine) {
+type QuestionsController struct {
+	questionsService services.QuestionService
+}
+
+func RegisterRoutes(r *gin.Engine, questionsService *services.QuestionService) {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation("date", validDate)
 	}
 
+	questionsController := QuestionsController{questionsService: *questionsService}
+
 	questionsGroup := r.Group("/questions")
-	questionsGroup.GET(":id", getQuestionByID)
+	questionsGroup.GET("tags", questionsController.GetAllQuestionTags)
+	questionsGroup.GET(":id", questionsController.GetQuestionByID)
 
 	individualQuestionsGroup := questionsGroup.Group(":id")
 	individualQuestionsGroup.GET("submissions", getQuestionSubmissionsByID)
 }
 
-func getQuestionByID(c *gin.Context) {
+func (c QuestionsController) GetQuestionByID(context *gin.Context) {
 	var request leetCodeQuestionRequest
-	if err := c.ShouldBindUri(&request); err != nil {
-		c.JSON(400, gin.H{
+	if err := context.ShouldBindUri(&request); err != nil {
+		context.JSON(400, gin.H{
 			"error": "The id of the question must be a valid integer.",
 		})
+		return
 	}
 
-	c.JSON(200, gin.H{
-		"message": "We will get back to you with an answer.",
-	})
+	intId, err := strconv.Atoi(request.ID)
+	if err != nil {
+		context.JSON(400, gin.H{
+			"error": "The id of the question must be a valid integer.",
+		})
+		return
+	}
+
+	question, err := c.questionsService.GetQuestionByID(intId)
+	if err != nil {
+		context.JSON(500, gin.H{
+			"error": "An internal server has occurred.",
+		})
+		return
+	}
+	if question == nil {
+		context.JSON(404, gin.H{
+			"message": "No question is associated with this code.",
+		})
+		return
+	}
+
+	tags, err := c.questionsService.GetTagsForQuestion(intId)
+	if err != nil {
+		context.JSON(500, gin.H{
+			"error": "An internal server error has occurred.",
+		})
+		return
+	}
+
+	question.Tags = tags
+
+	fmt.Printf("The question is %+v\n", *question)
+
+	context.JSON(200, *question)
 }
 
 func getQuestionSubmissionsByID(c *gin.Context) {
@@ -63,5 +106,18 @@ func getQuestionSubmissionsByID(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"data": []string{},
+	})
+}
+
+func (c QuestionsController) GetAllQuestionTags(context *gin.Context) {
+	tags, err := c.questionsService.GetAllQuestionTags()
+	if err != nil {
+		context.JSON(500, gin.H{
+			"error": "An internal server error has occurred.",
+		})
+	}
+
+	context.JSON(200, gin.H{
+		"tags": tags,
 	})
 }

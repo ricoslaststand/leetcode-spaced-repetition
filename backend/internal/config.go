@@ -1,4 +1,4 @@
-package config
+package internal
 
 import (
 	"fmt"
@@ -35,8 +35,6 @@ func GetConfig() (Config, error) {
 	}
 
 	fmt.Printf("The config is %+v\n", config)
-	// format := "Debug: %v\nPort: %d\nUser: %s\nRate: %f\nTimeout: %s\n"
-	// _, err = fmt.Printf(format, s.Debug, s.Port, s.User, s.Rate, s.Timeout)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

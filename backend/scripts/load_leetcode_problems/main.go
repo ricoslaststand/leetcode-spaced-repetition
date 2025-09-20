@@ -1,13 +1,17 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
+	"leetcode-spaced-repetition/internal"
 	config "leetcode-spaced-repetition/internal"
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/repositories"
+	"log"
 	"os"
+	"strconv"
+
+	_ "github.com/lib/pq"
 )
 
 type Difficulty struct {
@@ -48,15 +52,24 @@ type ProblemData struct {
 	StatStatusPairs []StatStatusPair `json:"stat_status_pairs"`
 }
 
-var db *sql.DB
+type Questions struct {
+	Questions []struct {
+		ID   string   `json:"problem_id"`
+		Tags []string `json:"topics"`
+	} `json:"questions"`
+}
 
 func main() {
 	config, err := config.GetConfig()
 	if err != nil {
-
+		return
 	}
 
-	cfg := post
+	db, err := internal.GetDBConnFromConfig(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 
 	fmt.Printf("Loading leetcode problems...")
 
@@ -87,19 +100,56 @@ func main() {
 		currQuestion := responseData.StatStatusPairs[i]
 		questionDifficulty, err := models.DetermineDifficulty(currQuestion.Difficulty.Level)
 
-		if err == nil {
+		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
 
 		questions = append(questions, models.Question{
-			ID:         currQuestion.Stat.QuestionID,
-			Title:      currQuestion.Stat.QuestionTitle,
-			Difficulty: questionDifficulty,
+			ID:          currQuestion.Stat.QuestionID,
+			Title:       currQuestion.Stat.QuestionTitle,
+			Description: "",
+			Slug:        currQuestion.Stat.QuestionTitleSlug,
+			Difficulty:  questionDifficulty,
 		})
 	}
 
+	fmt.Println("Saving questions to the database")
+
 	for i := 0; i < len(questions); i++ {
-		questionRepo.SaveQuestion(questions[i])
+		err = questionRepo.SaveQuestion(questions[i])
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// Adding question tags
+	tagsFileContent, err := os.ReadFile("merged_problems.json")
+	if err != nil {
+
+	}
+
+	var mergedQuestions Questions
+	err = json.Unmarshal(tagsFileContent, &mergedQuestions)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < len(mergedQuestions.Questions); i++ {
+		question := mergedQuestions.Questions[i]
+		questionId, err := strconv.Atoi(question.ID)
+		if err != nil {
+			fmt.Printf("Invalid questionId\n")
+		}
+
+		// fmt.Printf("Processing question %d", questionId)
+
+		for j := 0; j < len(question.Tags); j++ {
+			fmt.Printf("Processing questionId %d, tag %s\n", questionId, question.Tags[j])
+			err = questionRepo.SaveQuestionTag(questionId, question.Tags[j])
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 }

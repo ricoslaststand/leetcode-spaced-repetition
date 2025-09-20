@@ -34,6 +34,12 @@ type Question struct {
 	Difficulty  QuestionDifficulty `json:"difficulty"`
 }
 
+type QuestionTag struct {
+	ID         int    `json:"id"`
+	QuestionID int    `json:"questionId"`
+	Tag        string `json:"tag"`
+}
+
 type QuestionSubmission struct {
 	ID              uuid.UUID       `json:"id"`
 	QuestionID      int             `json:"questionId"`
