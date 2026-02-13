@@ -4,6 +4,22 @@ test:
 	@echo "Testing..."
 	@go test ./... -v
 
+lint:
+	@if command -v golangci-lint > /dev/null; then \
+		echo "Linting..."; \
+		golangci-lint run ./...; \
+	else \
+		read -p "golangci-lint is not installed on your machine. Do you want to install it? [Y/n] " choice; \
+		if [ "$$choice" != "n" ] && [ "$$choice" != "N" ]; then \
+			go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+			echo "Installed golangci-lint"; \
+			golangci-lint run ./...; \
+		else \
+			echo "You chose not to install golangci-lint. Exiting..."; \
+			exit 1; \
+		fi; \
+	fi
+
 clean:
 	@echo "Cleaning..."
 	@rm -f main

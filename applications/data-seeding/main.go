@@ -13,8 +13,6 @@ import (
 	"strings"
 )
 
-// const leetcodeProblemsDir = "leetcode-company-wise-problems"
-
 type LeetcodeProblem struct {
 	Name       string
 	Difficulty models.QuestionDifficulty
@@ -48,12 +46,6 @@ const (
 	LastSixMonths     = "last_six_months"
 	MoreThanSixMonths = "more_than_six_months"
 )
-
-// const (
-// 	EasyDifficulty QuestionDifficulty = iota + 1
-// 	MediumDifficulty
-// 	HardDifficulty
-// )
 
 const (
 	DifficultyIdx int = iota
@@ -143,8 +135,11 @@ func main() {
 		}
 
 		intQuestionID, err := strconv.Atoi(question.ProblemID)
+		if err != nil {
+			return
+		}
 
-		err = questionsRepo.SaveQuestion(context.Background(), models.Question{
+		err = questionsRepo.SaveQuestion(context.Background(), &models.Question{
 			ID:          intQuestionID,
 			Title:       question.Title,
 			Description: question.Description,
@@ -166,98 +161,4 @@ func main() {
 		}
 	}
 
-	// fmt.Println("Downloading the leetcode problems...")
-
-	// cmd := exec.Command("git", "clone", "https://github.com/liquidslr/leetcode-company-wise-problems.git")
-	// err = cmd.Run()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// fmt.Println("Downloaded the leetcode company wise problems")
-
-	// companies, err := os.ReadDir(leetcodeProblemsDir)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// companyNames := []string{}
-
-	// for _, e := range companies {
-	// 	companyName := e.Name()
-	// 	hiddenFile := strings.Contains(companyName, ".")
-	// 	if !hiddenFile {
-	// 		companyNames = append(companyNames, companyName)
-
-	// 	}
-	// 	fmt.Println(e.Name())
-	// }
-
-	// allProblems := []LeetcodeProblem{}
-
-	// for _, company := range companyNames {
-	// 	problemsByFreq, err := os.ReadDir(filepath.Join(leetcodeProblemsDir, company))
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		return
-	// 	}
-
-	// 	for _, freq := range problemsByFreq {
-	// 		freqName := freq.Name()
-	// 		fmt.Println(freqName)
-	// 		fPath := filepath.Join(leetcodeProblemsDir, company, freqName)
-	// 		file, err := os.Open(fPath)
-	// 		if err != nil {
-	// 			fmt.Println(err)
-	// 		}
-	// 		reader := csv.NewReader(file)
-	// 		records, _ := reader.ReadAll()
-
-	// 		for _, record := range records {
-	// 			freq, err := strconv.ParseFloat(record[FrequencyIdx], 5)
-	// 			if err != nil {
-
-	// 			}
-
-	// 			acceptance, err := strconv.ParseFloat(record[AcceptanceIdx], 5)
-	// 			if err != nil {
-
-	// 			}
-
-	// 			// difficulty, err := convertStringToDifficulty(record[DifficultyIdx])
-	// 			if err != nil {
-
-	// 			}
-
-	// 			timeTag, err := convertFileNameToTimeTag(freqName)
-	// 			if err != nil {
-
-	// 			}
-
-	// 			allProblems = append(allProblems, LeetcodeProblem{
-	// 				Name:       record[NameIdx],
-	// 				Frequency:  freq,
-	// 				Difficulty: difficulty,
-	// 				Acceptance: acceptance,
-	// 				Slug:       getSlugFromLink(record[LinkIdx]),
-	// 				TimeTag:    string(timeTag),
-	// 			})
-	// 		}
-	// 	}
-	// }
-
-	// for _, problem := range allProblems {
-	// 	questionsRepo.SaveQuestion(context.Background(), models.Question{
-	// 		Title:      problem.Name,
-	// 		Slug:       problem.Slug,
-	// 		Difficulty: models.QuestionDifficulty(problem.Difficulty),
-	// 	})
-	// }
-
-	// fmt.Printf("%+v\n", allProblems)
-
-	// defer func() {
-	// 	os.RemoveAll(leetcodeProblemsDir)
-	// 	fmt.Println("Removed")
-	// }()
 }

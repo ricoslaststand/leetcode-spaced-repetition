@@ -3,13 +3,15 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"leetcode-spaced-repetition/models"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+
+	"leetcode-spaced-repetition/models"
 )
 
 type QuestionPostgresRepository struct {
@@ -22,7 +24,7 @@ func (r QuestionPostgresRepository) SaveQuestionSubmission(c context.Context, qu
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.ExecContext(
 		c,
@@ -34,8 +36,8 @@ func (r QuestionPostgresRepository) SaveQuestionSubmission(c context.Context, qu
 		confidenceLevel,
 	)
 	if err != nil {
-		pqErr, ok := err.(*pq.Error)
-		if pqErr.Code == "23503" && ok {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23503" {
 			return fmt.Errorf("foreign key violation: %v", pqErr.Message)
 		}
 
@@ -57,7 +59,7 @@ func NewQuestionPostgresRepository(db *sql.DB) *QuestionPostgresRepository {
 	}
 }
 
-func (r QuestionPostgresRepository) GetQuestions(ctx context.Context, tags []string, page int, limit int) ([]models.Question, error) {
+func (r QuestionPostgresRepository) GetQuestions(ctx context.Context, tags []string, page, limit int) ([]models.Question, error) {
 	var questions []models.Question
 
 	rows, err := r.db.QueryContext(
@@ -67,7 +69,7 @@ func (r QuestionPostgresRepository) GetQuestions(ctx context.Context, tags []str
 	if err != nil {
 		return questions, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var question models.Question
@@ -81,13 +83,13 @@ func (r QuestionPostgresRepository) GetQuestions(ctx context.Context, tags []str
 	return questions, nil
 }
 
-func (r QuestionPostgresRepository) GetQuestionByID(ctx context.Context, ID int) (*models.Question, error) {
+func (r QuestionPostgresRepository) GetQuestionByID(ctx context.Context, questionID int) (*models.Question, error) {
 	var id int
 	var title string
 	var slug string
 	var difficulty int
 
-	row := r.db.QueryRowContext(ctx, "SELECT id, title, slug, difficulty FROM questions WHERE id = $1", ID)
+	row := r.db.QueryRowContext(ctx, "SELECT id, title, slug, difficulty FROM questions WHERE id = $1", questionID)
 	switch err := row.Scan(&id, &title, &slug, &difficulty); err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -103,7 +105,7 @@ func (r QuestionPostgresRepository) GetQuestionByID(ctx context.Context, ID int)
 	}
 }
 
-func (r QuestionPostgresRepository) GetQuestionStatsByID(ctx context.Context, ID int) (*models.QuestionSubmissionUserStats, error) {
+func (r QuestionPostgresRepository) GetQuestionStatsByID(ctx context.Context, id int) (*models.QuestionSubmissionUserStats, error) {
 	return nil, nil
 }
 
@@ -128,7 +130,7 @@ func (r QuestionPostgresRepository) GetQuestionSubmissions(ctx context.Context, 
 		if err != nil {
 			return []models.QuestionSubmissionWithDetails{}, err
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		for rows.Next() {
 			var sub models.QuestionSubmissionWithDetails
@@ -169,7 +171,7 @@ func (r QuestionPostgresRepository) GetQuestionSubmissions(ctx context.Context, 
 		if err != nil {
 			return []models.QuestionSubmissionWithDetails{}, err
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		for rows.Next() {
 			var sub models.QuestionSubmissionWithDetails
@@ -212,7 +214,7 @@ func (r QuestionPostgresRepository) GetSubmissionsByQuestionID(c context.Context
 	if err != nil {
 		return []models.QuestionSubmission{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var sub models.QuestionSubmission
@@ -233,7 +235,7 @@ func (r QuestionPostgresRepository) GetSubmissionsByQuestionID(c context.Context
 	return submissions, nil
 }
 
-func (r QuestionPostgresRepository) SaveQuestion(c context.Context, q models.Question) error {
+func (r QuestionPostgresRepository) SaveQuestion(c context.Context, q *models.Question) error {
 	_, err := r.db.Exec(
 		"INSERT INTO questions (id, title, slug, description, difficulty) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING",
 		q.ID, q.Title, q.Slug, q.Description, q.Difficulty,
@@ -256,7 +258,7 @@ func (r QuestionPostgresRepository) GetAllQuestionTags(ctx context.Context) ([]s
 	if err != nil {
 		return []string{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tags []string
 
@@ -272,12 +274,12 @@ func (r QuestionPostgresRepository) GetAllQuestionTags(ctx context.Context) ([]s
 	return tags, nil
 }
 
-func (r QuestionPostgresRepository) GetTagsForQuestion(ctx context.Context, ID int) ([]string, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT tag FROM questionTags WHERE questionId = $1", ID)
+func (r QuestionPostgresRepository) GetTagsForQuestion(ctx context.Context, id int) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx, "SELECT tag FROM questionTags WHERE questionId = $1", id)
 	if err != nil {
 		return []string{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tags []string
 
@@ -291,42 +293,4 @@ func (r QuestionPostgresRepository) GetTagsForQuestion(ctx context.Context, ID i
 	}
 
 	return tags, nil
-}
-
-func (r QuestionPostgresRepository) getQuestionCard(c context.Context, tx *sql.Tx, questionID int, userID uuid.UUID) (models.CardState, error) {
-	var id string
-	var questionId int
-	var userId string
-	var stability float64
-	var difficulty float64
-	var elapsedDays uint64
-	var scheduledDays uint64
-	var reps uint64
-	var lapses uint64
-	var lastReview time.Time
-
-	row := tx.QueryRowContext(
-		c,
-		"SELECT id, questionId, userId, stability, difficulty, elapsedDays, scheduledDays, reps, lapses, lastReview FROM cardStates WHERE questionId = $1 AND userId = $2",
-		questionID, userID,
-	)
-
-	err := row.Scan(&id, &questionId, &userId, &stability, &difficulty, &elapsedDays, &scheduledDays, &reps, &lapses, &lastReview)
-
-	if err != nil {
-		return models.CardState{}, err
-	}
-
-	return models.CardState{
-		ID:            uuid.MustParse(id),
-		QuestionID:    questionId,
-		UserID:        uuid.MustParse(userId),
-		Stability:     stability,
-		Difficulty:    difficulty,
-		ElapsedDays:   elapsedDays,
-		ScheduledDays: scheduledDays,
-		Reps:          reps,
-		Lapses:        lapses,
-		LastReview:    lastReview,
-	}, nil
 }

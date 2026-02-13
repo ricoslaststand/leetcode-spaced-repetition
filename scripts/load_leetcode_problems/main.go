@@ -120,7 +120,7 @@ func main() {
 	c := context.Background()
 
 	for i := 0; i < len(questions); i++ {
-		err = questionRepo.SaveQuestion(c, questions[i])
+		err = questionRepo.SaveQuestion(c, &questions[i])
 		if err != nil {
 			panic(err)
 		}
