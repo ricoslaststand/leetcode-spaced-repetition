@@ -71,13 +71,11 @@ func convertFileNameToTimeTag(filename string) (TimeTag, error) {
 }
 
 func convertStringToDifficulty(diffStr string) (models.QuestionDifficulty, error) {
-	lowerDiffStr := strings.ToLower(strings.Trim(diffStr, " `"))
-
-	switch lowerDiffStr {
+	switch strings.ToLower(strings.Trim(diffStr, " `")) {
 	case "easy":
 		return models.EasyDifficulty, nil
-	case "medium":
-		return models.MediumDifficulty, nil
+	case "medium", "mild":
+		return models.MildDifficulty, nil
 	case "hard":
 		return models.HardDifficulty, nil
 	default:

@@ -99,10 +99,14 @@ func main() {
 	var questions []models.Question
 	for i := 0; i < numOfQuestions; i++ {
 		currQuestion := responseData.StatStatusPairs[i]
-		questionDifficulty, err := models.DetermineDifficulty(currQuestion.Difficulty.Level)
-
-		if err != nil {
-			fmt.Println(err.Error())
+		difficultyMap := map[int]models.QuestionDifficulty{
+			1: models.EasyDifficulty,
+			2: models.MildDifficulty,
+			3: models.HardDifficulty,
+		}
+		questionDifficulty, ok := difficultyMap[currQuestion.Difficulty.Level]
+		if !ok {
+			fmt.Printf("unrecognized difficulty level: %d\n", currQuestion.Difficulty.Level)
 			return
 		}
 

@@ -1,4 +1,4 @@
-FROM node:24-alpine3.21
+FROM node:25.6.1-alpine3.23
 
 WORKDIR /app
 
@@ -8,8 +8,6 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 1234
+EXPOSE 5173
 
-RUN npm run dev
-
-ENTRYPOINT [ "npm", "run", "start" ]
+ENTRYPOINT [ "npm", "run", "dev" ]

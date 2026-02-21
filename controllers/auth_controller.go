@@ -23,6 +23,18 @@ func NewAuthController(authService services.AuthService) *AuthController {
 	}
 }
 
+// Login godoc
+// @Summary      User login
+// @Description  Validates credentials and returns an authentication token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  loginRequestBody  true  "Login credentials"
+// @Success      200   {object}  map[string]string
+// @Failure      400   {object}  map[string]string
+// @Failure      401   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /auth/login [post]
 func (c AuthController) Login(ctx *gin.Context) {
 	var body loginRequestBody
 

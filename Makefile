@@ -24,6 +24,31 @@ clean:
 	@echo "Cleaning..."
 	@rm -f main
 
+swag:
+	@if command -v swag > /dev/null; then \
+		echo "Generating Swagger docs..."; \
+		swag init \
+			--generalInfo applications/api/main.go \
+			--dir . \
+			--output docs \
+			--parseDependency \
+			--parseInternal; \
+	else \
+		read -p "swag is not installed. Do you want to install it? [Y/n] " choice; \
+		if [ "$$choice" != "n" ] && [ "$$choice" != "N" ]; then \
+			go install github.com/swaggo/swag/cmd/swag@latest; \
+			swag init \
+				--generalInfo applications/api/main.go \
+				--dir . \
+				--output docs \
+				--parseDependency \
+				--parseInternal; \
+		else \
+			echo "You chose not to install swag. Exiting..."; \
+			exit 1; \
+		fi; \
+	fi
+
 watch:
 	@if command -v air > /dev/null; then \
             air; \

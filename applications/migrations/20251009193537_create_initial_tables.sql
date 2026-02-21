@@ -5,36 +5,39 @@ CREATE TABLE IF NOT EXISTS questions (
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
-    difficulty INT NOT NULL CHECK (difficulty > 0 AND difficulty < 4),
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'mild', 'hard')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS questionTags (
+CREATE TABLE IF NOT EXISTS question_tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    questionId INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
     tag VARCHAR(50) NOT NULL,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (questionId, tag),
-    FOREIGN KEY (questionId) REFERENCES questions(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (question_id, tag),
+    FOREIGN KEY (question_id) REFERENCES questions(id)
 );
 
-CREATE TABLE IF NOT EXISTS questionSubmissions (
+CREATE TABLE IF NOT EXISTS question_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    userId UUID NOT NULL,
-    questionId INT NOT NULL,
-    submissionDate DATE NOT NULL,
-    confidenceLevel INT NOT NULL CHECK (confidenceLevel > 0 AND confidenceLevel < 6),
-    timeTaken INTERVAL,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (userId, questionId, submissionDate),
-    FOREIGN KEY (questionId) REFERENCES questions(id)
+    user_id UUID NOT NULL,
+    question_id INT NOT NULL,
+    submission_date DATE NOT NULL,
+    confidence_level TEXT NOT NULL CHECK (confidence_level IN ('again', 'hard', 'good', 'easy')),
+    time_taken INTERVAL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, question_id, submission_date),
+    FOREIGN KEY (question_id) REFERENCES questions(id)
 );
 
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP TABLE IF EXISTS question_submissions;
+DROP TABLE IF EXISTS question_tags;
+DROP TABLE IF EXISTS questions;
 -- +goose StatementEnd

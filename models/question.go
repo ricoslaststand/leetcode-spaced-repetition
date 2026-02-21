@@ -2,28 +2,28 @@ package models
 
 import (
 	"fmt"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	fsrs "github.com/open-spaced-repetition/go-fsrs"
 )
 
-type QuestionDifficulty int
+type QuestionDifficulty string
 
 const (
-	EasyDifficulty QuestionDifficulty = iota + 1
-	MediumDifficulty
-	HardDifficulty
+	EasyDifficulty QuestionDifficulty = "easy"
+	MildDifficulty QuestionDifficulty = "mild"
+	HardDifficulty QuestionDifficulty = "hard"
 )
 
-type ConfidenceLevel int
+type ConfidenceLevel string
 
 const (
-	VeryLowConfidence ConfidenceLevel = iota + 1
-	LowConfidence
-	MediumConfidence
-	HighConfidence
+	AgainConfidence ConfidenceLevel = "again"
+	HardConfidence  ConfidenceLevel = "hard"
+	GoodConfidence  ConfidenceLevel = "good"
+	EasyConfidence  ConfidenceLevel = "easy"
 )
 
 type (
@@ -51,10 +51,10 @@ type (
 	}
 
 	QuestionSubmissionWithDetails struct {
-		ID              uuid.UUID `json:"id"`
-		SubmittedAt     time.Time `json:"submittedAt"`
-		TimeTaken       uint      `json:"timeTaken"`
-		ConfidenceLevel int       `json:"confidenceLevel"`
+		ID              uuid.UUID       `json:"id"`
+		SubmittedAt     time.Time       `json:"submittedAt"`
+		TimeTaken       uint            `json:"timeTaken"`
+		ConfidenceLevel ConfidenceLevel `json:"confidenceLevel"`
 		Question        struct {
 			ID          int                `json:"id"`
 			Title       string             `json:"title"`
@@ -78,23 +78,18 @@ type (
 	}
 )
 
-func DetermineDifficulty(val int) (QuestionDifficulty, error) {
-	if val < int(EasyDifficulty) && val > int(HardDifficulty) {
-		return EasyDifficulty, fmt.Errorf("%d is not recognized as a valid difficulty level", val)
-	}
-
-	return QuestionDifficulty(val), nil
-}
 
 func DetermineConfidenceLevelFromString(valStr string) (ConfidenceLevel, error) {
-	val, err := strconv.ParseInt(valStr, 10, 0)
-	if err != nil {
-		return HighConfidence, err
+	switch strings.ToLower(strings.TrimSpace(valStr)) {
+	case "again", "1":
+		return AgainConfidence, nil
+	case "hard", "2":
+		return HardConfidence, nil
+	case "good", "3":
+		return GoodConfidence, nil
+	case "easy", "4":
+		return EasyConfidence, nil
+	default:
+		return AgainConfidence, fmt.Errorf("%q is not a recognized confidence level", valStr)
 	}
-
-	if val < int64(VeryLowConfidence) && val > int64(HighConfidence) {
-		return HighConfidence, fmt.Errorf("%d is not recognized as a valid difficulty level", val)
-	}
-
-	return ConfidenceLevel(val), nil
 }

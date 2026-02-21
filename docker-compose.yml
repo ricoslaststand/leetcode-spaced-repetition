@@ -20,19 +20,25 @@ services:
     networks:
       - app-network
   
-  # app:
-  #   container_name: leetcode-buddy-app
-  #   build:
-  #     dockerfile: Dockerfile
-  #     context: ./frontend/leetcode-buddy-app
-  #   restart: unless-stopped
+  app:
+    container_name: leetcode-buddy-app-frontend
+    build:
+      dockerfile: Dockerfile
+      context: ./frontend/
+    ports:
+      - 5173:5173
+    networks:
+      - app-network
+    restart: unless-stopped
+
 
   api:
+    container_name: leetcode-buddy-app-api
     build:
       dockerfile: Dockerfile
       context: ./
     ports:
-    - 8000:8000
+      - 8000:8000
     depends_on:
       - db
     volumes:

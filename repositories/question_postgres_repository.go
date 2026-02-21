@@ -28,7 +28,7 @@ func (r QuestionPostgresRepository) SaveQuestionSubmission(c context.Context, qu
 
 	_, err = tx.ExecContext(
 		c,
-		`INSERT INTO questionSubmissions (questionId, userId, submissionDate, timeTaken, confidenceLevel) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (questionId, userId, submissionDate) DO NOTHING`,
+		`INSERT INTO question_submissions (question_id, user_id, submission_date, time_taken, confidence_level) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (question_id, user_id, submission_date) DO NOTHING`,
 		questionID,
 		userID,
 		date,
@@ -64,7 +64,7 @@ func (r QuestionPostgresRepository) GetQuestions(ctx context.Context, tags []str
 
 	rows, err := r.db.QueryContext(
 		ctx, `SELECT id, title, slug, difficulty FROM questions WHERE id IN (
-		SELECT questionId FROM questionTags WHERE tag IN ($1)
+		SELECT question_id FROM question_tags WHERE tag IN ($1)
 	) ORDER BY id LIMIT $2`, strings.Join(tags, ","), limit)
 	if err != nil {
 		return questions, err
@@ -87,7 +87,7 @@ func (r QuestionPostgresRepository) GetQuestionByID(ctx context.Context, questio
 	var id int
 	var title string
 	var slug string
-	var difficulty int
+	var difficulty models.QuestionDifficulty
 
 	row := r.db.QueryRowContext(ctx, "SELECT id, title, slug, difficulty FROM questions WHERE id = $1", questionID)
 	switch err := row.Scan(&id, &title, &slug, &difficulty); err {
@@ -98,7 +98,7 @@ func (r QuestionPostgresRepository) GetQuestionByID(ctx context.Context, questio
 			ID:         id,
 			Title:      title,
 			Slug:       slug,
-			Difficulty: models.QuestionDifficulty(difficulty),
+			Difficulty: difficulty,
 		}, nil
 	default:
 		return nil, err
@@ -115,17 +115,17 @@ func (r QuestionPostgresRepository) GetQuestionSubmissions(ctx context.Context, 
 		rows, err := r.db.QueryContext(
 			ctx,
 			`SELECT
-				questionSubmissions.id,
-				questionSubmissions.questionId,
-				submissionDate,
-				EXTRACT(EPOCH  FROM timeTaken),
-				confidenceLevel,
+				question_submissions.id,
+				question_submissions.question_id,
+				submission_date,
+				EXTRACT(EPOCH  FROM time_taken),
+				confidence_level,
 				questions.title,
 				questions.description,
 				questions.difficulty
-			FROM questionSubmissions
-			JOIN questions ON questionSubmissions.questionId = questions.id
-			ORDER BY submissionDate DESC`,
+			FROM question_submissions
+			JOIN questions ON question_submissions.question_id = questions.id
+			ORDER BY submission_date DESC`,
 		)
 		if err != nil {
 			return []models.QuestionSubmissionWithDetails{}, err
@@ -156,16 +156,16 @@ func (r QuestionPostgresRepository) GetQuestionSubmissions(ctx context.Context, 
 		rows, err := r.db.QueryContext(
 			ctx,
 			`SELECT
-				questionSubmissions.id,
-				questionSubmissions.questionId,
-				submissionDate,
-				EXTRACT(EPOCH  FROM timeTaken),
-				confidenceLevel,
+				question_submissions.id,
+				question_submissions.question_id,
+				submission_date,
+				EXTRACT(EPOCH  FROM time_taken),
+				confidence_level,
 				questions.title,
 				questions.description
-			FROM questionSubmissions
-			JOIN questions ON questionSubmissions.questionId = questions.id WHERE questionId = ANY($1)
-			ORDER BY submissionDate DESC`,
+			FROM question_submissions
+			JOIN questions ON question_submissions.question_id = questions.id WHERE question_id = ANY($1)
+			ORDER BY submission_date DESC`,
 			pq.Array(questionID),
 		)
 		if err != nil {
@@ -202,13 +202,13 @@ func (r QuestionPostgresRepository) GetSubmissionsByQuestionID(c context.Context
 		c,
 		`SELECT
 			id,
-			questionId,
-			submissionDate,
-			EXTRACT(EPOCH  FROM timeTaken),
-			confidenceLevel
-		FROM questionSubmissions
-		WHERE questionId = $1
-		ORDER BY submissionDate DESC`,
+			question_id,
+			submission_date,
+			EXTRACT(EPOCH  FROM time_taken),
+			confidence_level
+		FROM question_submissions
+		WHERE question_id = $1
+		ORDER BY submission_date DESC`,
 		questionID,
 	)
 	if err != nil {
@@ -246,7 +246,7 @@ func (r QuestionPostgresRepository) SaveQuestion(c context.Context, q *models.Qu
 
 func (r QuestionPostgresRepository) SaveQuestionTag(c context.Context, questionId int, tag string) error {
 	_, err := r.db.Exec(
-		"INSERT INTO questionTags (questionId, tag) VALUES ($1, $2) ON CONFLICT (questionId, tag) DO NOTHING",
+		"INSERT INTO question_tags (question_id, tag) VALUES ($1, $2) ON CONFLICT (question_id, tag) DO NOTHING",
 		questionId, tag,
 	)
 
@@ -254,7 +254,7 @@ func (r QuestionPostgresRepository) SaveQuestionTag(c context.Context, questionI
 }
 
 func (r QuestionPostgresRepository) GetAllQuestionTags(ctx context.Context) ([]string, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT DISTINCT(tag) FROM questionTags ORDER BY tag")
+	rows, err := r.db.QueryContext(ctx, "SELECT DISTINCT(tag) FROM question_tags ORDER BY tag")
 	if err != nil {
 		return []string{}, err
 	}
@@ -275,7 +275,7 @@ func (r QuestionPostgresRepository) GetAllQuestionTags(ctx context.Context) ([]s
 }
 
 func (r QuestionPostgresRepository) GetTagsForQuestion(ctx context.Context, id int) ([]string, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT tag FROM questionTags WHERE questionId = $1", id)
+	rows, err := r.db.QueryContext(ctx, "SELECT tag FROM question_tags WHERE question_id = $1", id)
 	if err != nil {
 		return []string{}, err
 	}

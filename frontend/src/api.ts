@@ -55,7 +55,7 @@ export const getQuestionSubmissionsV2 = async (questionIds: number[]) => {
 }
 
 export const createQuestionSubmission
-    = async (questionID: number, confidenceLevel: number, timeTaken?: number) => {
+    = async (questionID: number, confidenceLevel: string, timeTaken?: number) => {
     const response = await instance.post(`/questions/submissions`, {
         questionID,
         confidenceLevel,

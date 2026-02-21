@@ -1,3 +1,8 @@
+// @title           Leetcode Buddy API
+// @version         1.0
+// @description     A spaced repetition API for tracking Leetcode practice sessions.
+// @host            localhost:8000
+// @BasePath        /
 package main
 
 import (
@@ -9,10 +14,14 @@ import (
 	"leetcode-spaced-repetition/services"
 	"log"
 
+	_ "leetcode-spaced-repetition/docs"
+
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -43,6 +52,8 @@ func main() {
 			"message": "pong",
 		})
 	})
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	p := ginprometheus.NewWithConfig(ginprometheus.Config{
 		Subsystem: "gin",

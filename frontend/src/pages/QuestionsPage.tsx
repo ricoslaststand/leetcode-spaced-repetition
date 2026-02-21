@@ -16,7 +16,6 @@ import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
 import { useQuestionTags } from "../hooks/api";
 import { generateLinkForLeetcode } from "../lib/leetcodeUtils";
-import { convertNumToDifficulty } from "../models/Question";
 
 const baseBadgeClass = "cursor-pointer"
 
@@ -120,7 +119,7 @@ const QuestionsPage = () => {
                                 <TableRow>
                                     <TableCell className="text-left">{question.id}</TableCell>
                                     <TableCell className="font-medium text-left">{question.title}</TableCell>
-                                    <TableCell className="text-left">{convertNumToDifficulty(question.difficulty)}</TableCell>
+                                    <TableCell className="text-left">{question.difficulty}</TableCell>
                                     <TableCell className="text-left">
                                         <Link to={`/questions/${question.id}`}>Open Submissions</Link>
                                     </TableCell>

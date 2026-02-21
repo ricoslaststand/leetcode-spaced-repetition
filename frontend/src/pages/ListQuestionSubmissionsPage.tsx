@@ -14,18 +14,6 @@ import { useNavigate, Link } from "@tanstack/react-router";
 import { getQuestionSubmissionsV2 } from "../api";
 import { generateLeetcodeURL } from "../lib/leetcodeUtils";
 
-const convertNumToDifficulty = (val: number) => {
-    switch (val) {
-        case 1:
-            return "Easy"
-        case 2:
-            return "Medium"
-        case 3:
-            return "Difficult"
-        default:
-            return "N/A"
-    }
-}
 
 const generateLinkForLeetcode = (slug: string): string => {
     return `https://leetcode.com/problems/${slug}/`
@@ -72,7 +60,7 @@ const ListQuestionSubmissionsPage = () => {
                                 <TableRow>
                                     <TableCell className="text-left">{submission.question.id}</TableCell>
                                     <TableCell className="font-medium text-left">{submission.question.title}</TableCell>
-                                    <TableCell className="text-left">{convertNumToDifficulty(submission.question.difficulty)}</TableCell>
+                                    <TableCell className="text-left">{submission.question.difficulty}</TableCell>
                                     <TableCell className="text-left">
                                         <Link to={`/questions/${submission.question.id}`}>Open Submissions</Link>
                                     </TableCell>

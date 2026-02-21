@@ -20,13 +20,13 @@ func toCard(state models.CardState) fsrs.Card {
 
 func toRating(confidenceLevel models.ConfidenceLevel) fsrs.Rating {
 	switch confidenceLevel {
-	case models.VeryLowConfidence:
+	case models.AgainConfidence:
 		return fsrs.Again
-	case models.LowConfidence:
+	case models.HardConfidence:
 		return fsrs.Hard
-	case models.MediumConfidence:
+	case models.GoodConfidence:
 		return fsrs.Good
-	case models.HighConfidence:
+	case models.EasyConfidence:
 		return fsrs.Easy
 	default:
 		return fsrs.Again

@@ -8,7 +8,7 @@ import { toast } from "sonner"
 
 
 import type { ConfidenceLevel as ConfidenceLevelType } from '../models/Question';
-import { ConfidenceLevel } from '../models/Question';
+import { ConfidenceLevel, confidenceLevelToString } from '../models/Question';
 import { Input } from '../components/ui/input';
 import { Slider } from '../components/ui/slider';
 import { Field, FieldGroup, FieldLabel } from '../components/ui/field';
@@ -17,22 +17,22 @@ import { createQuestionSubmission } from '../api';
 
 const ConfidenceLevelMemes: { level: ConfidenceLevelType; meme: string; text: string }[] = [
     {
-        level: ConfidenceLevel.VeryLow,
+        level: ConfidenceLevel.Again,
         meme: "simpsons_repeat_stuff.gif",
         text: "I have no clue what's going on"
     },
     {
-        level: ConfidenceLevel.Low,
+        level: ConfidenceLevel.Hard,
         meme: "drake_explaining.gif",
         text: "I see how they did it, but I did not see that coming"
     },
     {
-        level: ConfidenceLevel.Medium,
+        level: ConfidenceLevel.Good,
         meme: "exploding_brain.gif",
         text: "Things are starting to click..."
     },
     {
-        level: ConfidenceLevel.High,
+        level: ConfidenceLevel.Easy,
         meme: "great_gatsy_nod.gif",
         text: "You did it, buddy"
     }
@@ -40,7 +40,7 @@ const ConfidenceLevelMemes: { level: ConfidenceLevelType; meme: string; text: st
 
 const formSchema = z.object({
     questionId: z.string(),
-    confidenceLevel: z.number().min(ConfidenceLevel.VeryLow).max(ConfidenceLevel.High),
+    confidenceLevel: z.number().min(ConfidenceLevel.Again).max(ConfidenceLevel.Easy),
     timeTaken: z.number().min(0)
 })
 
@@ -49,14 +49,14 @@ const QuestionSubmissionPage: React.FC = () => {
         resolver: zodResolver(formSchema),
         defaultValues: {
             questionId: "",
-            confidenceLevel: ConfidenceLevel.Medium,
+            confidenceLevel: ConfidenceLevel.Good,
         }
     })
 
     const onSubmit = async (data: z.infer<typeof formSchema>) => {
         await createQuestionSubmission(
             parseInt(data.questionId),
-            data.confidenceLevel,
+            confidenceLevelToString(data.confidenceLevel as ConfidenceLevelType),
             data.timeTaken
         )
         toast.success("Question submission created!")
@@ -91,8 +91,8 @@ const QuestionSubmissionPage: React.FC = () => {
                                     <Slider
                                         value={[field.value]}
                                         step={1}
-                                        min={ConfidenceLevel.VeryLow}
-                                        max={ConfidenceLevel.High}
+                                        min={ConfidenceLevel.Again}
+                                        max={ConfidenceLevel.Easy}
                                         onValueChange={val=> field.onChange(val[0])}
                                     />
                                     <p>{ConfidenceLevelMemes[field.value - 1].text}</p>

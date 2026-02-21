@@ -1,34 +1,31 @@
 export const ConfidenceLevel = {
-    VeryLow: 1,
-    Low: 2,
-    Medium: 3,
-    High: 4,
+    Again: 1,
+    Hard: 2,
+    Good: 3,
+    Easy: 4,
 } as const;
 export type ConfidenceLevel = typeof ConfidenceLevel[keyof typeof ConfidenceLevel];
+
+const confidenceLevelStrings: Record<ConfidenceLevel, string> = {
+    [ConfidenceLevel.Again]: 'again',
+    [ConfidenceLevel.Hard]: 'hard',
+    [ConfidenceLevel.Good]: 'good',
+    [ConfidenceLevel.Easy]: 'easy',
+}
+export function confidenceLevelToString(level: ConfidenceLevel): string {
+    return confidenceLevelStrings[level]
+}
 
 export type QuestionSubmissionWithDetails = {
     id: number;
     questionId: number;
-    confidenceLevel: ConfidenceLevel;
+    confidenceLevel: string;
     timeTaken: number | null;
     question: {
         id: number;
         title: string;
         slug: string;
-        difficulty: number;
+        difficulty: string;
         tags: string[];
     };
-}
-
-export function convertNumToDifficulty(val: number): string {
-    switch (val) {
-        case 1:
-            return "Easy"
-        case 2:
-            return "Medium"
-        case 3:
-            return "Difficult"
-        default:
-            return "N/A"
-    }
 }

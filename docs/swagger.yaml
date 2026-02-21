@@ -1,0 +1,360 @@
+basePath: /
+definitions:
+  controllers.loginRequestBody:
+    type: object
+  controllers.saveQuestionSubmissionRequest:
+    properties:
+      confidenceLevel:
+        maximum: 5
+        minimum: 1
+        type: integer
+      questionId:
+        minimum: 1
+        type: integer
+      timeTaken:
+        minimum: 0
+        type: integer
+    required:
+    - confidenceLevel
+    - questionId
+    - timeTaken
+    type: object
+  models.ConfidenceLevel:
+    enum:
+    - 1
+    - 2
+    - 3
+    - 4
+    type: integer
+    x-enum-varnames:
+    - VeryLowConfidence
+    - LowConfidence
+    - MediumConfidence
+    - HighConfidence
+  models.Question:
+    properties:
+      description:
+        type: string
+      difficulty:
+        $ref: '#/definitions/models.QuestionDifficulty'
+      id:
+        type: integer
+      slug:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  models.QuestionDifficulty:
+    enum:
+    - 1
+    - 2
+    - 3
+    type: integer
+    x-enum-varnames:
+    - EasyDifficulty
+    - MediumDifficulty
+    - HardDifficulty
+  models.QuestionPage:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Question'
+        type: array
+    required:
+    - data
+    type: object
+  models.QuestionSubmission:
+    properties:
+      confidenceLevel:
+        $ref: '#/definitions/models.ConfidenceLevel'
+      date:
+        type: string
+      id:
+        type: string
+      questionId:
+        type: integer
+      timeTaken:
+        type: integer
+    type: object
+  models.QuestionSubmissionPage:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.QuestionSubmission'
+        type: array
+    required:
+    - data
+    type: object
+  models.QuestionSubmissionWithDetails:
+    properties:
+      confidenceLevel:
+        type: integer
+      id:
+        type: string
+      question:
+        properties:
+          description:
+            type: string
+          difficulty:
+            $ref: '#/definitions/models.QuestionDifficulty'
+          id:
+            type: integer
+          title:
+            type: string
+        type: object
+      submittedAt:
+        type: string
+      timeTaken:
+        type: integer
+    type: object
+  models.QuestionSubmissionWithDetailsPage:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.QuestionSubmissionWithDetails'
+        type: array
+    required:
+    - data
+    type: object
+host: localhost:8000
+info:
+  contact: {}
+  description: A spaced repetition API for tracking Leetcode practice sessions.
+  title: Leetcode Buddy API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Validates credentials and returns an authentication token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.loginRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: User login
+      tags:
+      - auth
+  /questions:
+    get:
+      description: Returns a paginated list of Leetcode questions, optionally filtered
+        by tags
+      parameters:
+      - collectionFormat: csv
+        description: Filter by tag names
+        in: query
+        items:
+          type: string
+        name: tags
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.QuestionPage'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List questions
+      tags:
+      - questions
+  /questions/{id}:
+    get:
+      description: Returns a single question including its tags
+      parameters:
+      - description: Question ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Question'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a question by ID
+      tags:
+      - questions
+  /questions/{id}/submissions:
+    get:
+      description: Returns all submissions for the question identified by id
+      parameters:
+      - description: Question ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.QuestionSubmissionPage'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get submissions for a question
+      tags:
+      - questions
+  /questions/submissions:
+    get:
+      description: Returns submissions across all questions, optionally filtered by
+        question IDs
+      parameters:
+      - collectionFormat: csv
+        description: Filter by question IDs
+        in: query
+        items:
+          type: integer
+        name: questionId
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.QuestionSubmissionWithDetailsPage'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all submissions
+      tags:
+      - submissions
+    post:
+      consumes:
+      - application/json
+      description: Saves a new attempt for a Leetcode question
+      parameters:
+      - description: Submission details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.saveQuestionSubmissionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Record a new submission
+      tags:
+      - submissions
+  /questions/tags:
+    get:
+      description: Returns every tag that exists across all questions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all question tags
+      tags:
+      - questions
+swagger: "2.0"

@@ -27,7 +27,7 @@ type getSubmissionsRequest struct {
 type saveQuestionSubmissionRequest struct {
 	QuestionID      int `json:"questionId" binding:"required,number" validate:"gte=1"`
 	TimeTaken       int `json:"timeTaken" binding:"required,number" validate:"gte=0"`
-	ConfidenceLevel int `json:"confidenceLevel" binding:"required,number" validate:"gte=1,lte=5"`
+	ConfidenceLevel string `json:"confidenceLevel" binding:"required"`
 }
 
 var validDate validator.Func = func(fl validator.FieldLevel) bool {
@@ -62,6 +62,15 @@ func RegisterRoutes(r *gin.Engine, questionsService *services.QuestionService) {
 	individualQuestionsGroup.GET("submissions", questionsController.getQuestionSubmissions)
 }
 
+// getQuestions godoc
+// @Summary      List questions
+// @Description  Returns a paginated list of Leetcode questions, optionally filtered by tags
+// @Tags         questions
+// @Produce      json
+// @Param        tags  query  []string  false  "Filter by tag names"  collectionFormat(csv)
+// @Success      200   {object}  models.QuestionPage
+// @Failure      500   {object}  map[string]string
+// @Router       /questions [get]
 func (c QuestionsController) getQuestions(ctx *gin.Context) {
 	tags, _ := ctx.GetQueryArray("tags")
 
@@ -85,6 +94,17 @@ func (c QuestionsController) getQuestions(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
+// GetQuestionByID godoc
+// @Summary      Get a question by ID
+// @Description  Returns a single question including its tags
+// @Tags         questions
+// @Produce      json
+// @Param        id   path  int  true  "Question ID"
+// @Success      200  {object}  models.Question
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /questions/{id} [get]
 func (c QuestionsController) GetQuestionByID(context *gin.Context) {
 	var request leetCodeQuestionRequest
 	if err := context.ShouldBindUri(&request); err != nil {
@@ -123,6 +143,16 @@ func (c QuestionsController) GetQuestionByID(context *gin.Context) {
 	context.JSON(200, *question)
 }
 
+// getQuestionSubmissions godoc
+// @Summary      Get submissions for a question
+// @Description  Returns all submissions for the question identified by id
+// @Tags         questions
+// @Produce      json
+// @Param        id   path  int  true  "Question ID"
+// @Success      200  {object}  models.QuestionSubmissionPage
+// @Failure      400  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /questions/{id}/submissions [get]
 func (c QuestionsController) getQuestionSubmissions(context *gin.Context) {
 	var request leetCodeQuestionRequest
 	if err := context.ShouldBindUri(&request); err != nil {
@@ -155,6 +185,14 @@ func (c QuestionsController) getQuestionSubmissions(context *gin.Context) {
 	context.JSON(200, resp)
 }
 
+// GetAllQuestionTags godoc
+// @Summary      List all question tags
+// @Description  Returns every tag that exists across all questions
+// @Tags         questions
+// @Produce      json
+// @Success      200  {object}  map[string][]string
+// @Failure      500  {object}  map[string]string
+// @Router       /questions/tags [get]
 func (c QuestionsController) GetAllQuestionTags(context *gin.Context) {
 	tags, err := c.questionsService.GetAllQuestionTags(context)
 	if err != nil {
@@ -169,6 +207,17 @@ func (c QuestionsController) GetAllQuestionTags(context *gin.Context) {
 	})
 }
 
+// SaveQuestionSubmission godoc
+// @Summary      Record a new submission
+// @Description  Saves a new attempt for a Leetcode question
+// @Tags         submissions
+// @Accept       json
+// @Produce      json
+// @Param        body  body  saveQuestionSubmissionRequest  true  "Submission details"
+// @Success      201   {object}  map[string]string
+// @Failure      400   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /questions/submissions [post]
 func (c QuestionsController) SaveQuestionSubmission(context *gin.Context) {
 	var questionSubmissionRequest saveQuestionSubmissionRequest
 	if err := context.ShouldBindBodyWithJSON(&questionSubmissionRequest); err != nil {
@@ -197,6 +246,16 @@ func (c QuestionsController) SaveQuestionSubmission(context *gin.Context) {
 	})
 }
 
+// getAllQuestionSubmissions godoc
+// @Summary      List all submissions
+// @Description  Returns submissions across all questions, optionally filtered by question IDs
+// @Tags         submissions
+// @Produce      json
+// @Param        questionId  query  []int  false  "Filter by question IDs"  collectionFormat(csv)
+// @Success      200         {object}  models.QuestionSubmissionWithDetailsPage
+// @Failure      400         {object}  map[string]string
+// @Failure      500         {object}  map[string]string
+// @Router       /questions/submissions [get]
 func (c QuestionsController) getAllQuestionSubmissions(context *gin.Context) {
 	// questionIDsParam, exists := context.GetQueryArray("questionId")
 	var request getSubmissionsRequest
