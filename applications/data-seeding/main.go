@@ -7,10 +7,12 @@ import (
 	"leetcode-spaced-repetition/internal"
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/repositories"
-	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/mgechev/revive/config"
+	"go.uber.org/zap"
 )
 
 type LeetcodeProblem struct {
@@ -90,73 +92,75 @@ func getSlugFromLink(link string) string {
 }
 
 func main() {
-	config, err := internal.GetConfig()
+	config, err := config.GetConfig()
 	if err != nil {
-		panic(err)
+		panic("failed to load config")
 	}
+
+	logger := internal.NewLogger(config.AppEnv)
+	defer logger.Sync() //nolint:errcheck
 
 	db, err := internal.GetDBConnFromConfig(config)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer db.Close()
 
-	questionsRepo := repositories.NewQuestionPostgresRepository(db)
+	questionsRepo := repositories.NewQuestionPostgresRepository(db, logger)
 
 	entries, err := os.ReadDir("./")
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("failed to read directory", zap.Error(err))
 	}
 
 	for _, e := range entries {
-		fmt.Println(e.Name())
+		logger.Info("found file", zap.String("name", e.Name()))
 	}
 
 	tagsFileContent, err := os.ReadFile("merged_problems.json")
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Error("failed to read merged_problems.json", zap.Error(err))
 		return
 	}
 
 	var mergedQuestions questionsResponse
-	err = json.Unmarshal(tagsFileContent, &mergedQuestions)
-	if err != nil {
-		fmt.Println(err.Error())
+	if err = json.Unmarshal(tagsFileContent, &mergedQuestions); err != nil {
+		logger.Error("failed to unmarshal questions JSON", zap.Error(err))
 		return
 	}
 
 	for _, question := range mergedQuestions.Questions {
 		questionDifficulty, err := convertStringToDifficulty(question.Difficulty)
 		if err != nil {
-			fmt.Println(err.Error())
+			logger.Error("invalid difficulty", zap.String("difficulty", question.Difficulty), zap.Error(err))
 			return
 		}
 
 		intQuestionID, err := strconv.Atoi(question.ProblemID)
 		if err != nil {
+			logger.Error("invalid problem ID", zap.String("problemID", question.ProblemID), zap.Error(err))
 			return
 		}
 
-		err = questionsRepo.SaveQuestion(context.Background(), &models.Question{
+		if err = questionsRepo.SaveQuestion(context.Background(), &models.Question{
 			ID:          intQuestionID,
 			Title:       question.Title,
 			Description: question.Description,
 			Slug:        question.ProblemSlug,
 			Difficulty:  questionDifficulty,
 			Tags:        question.Topics,
-		})
-		if err != nil {
-			fmt.Println(err.Error())
+		}); err != nil {
+			logger.Error("failed to save question", zap.Int("questionID", intQuestionID), zap.Error(err))
 			return
 		}
 
 		for _, tag := range question.Topics {
-			err = questionsRepo.SaveQuestionTag(context.Background(), intQuestionID, tag)
-			if err != nil {
-				fmt.Println(err.Error())
+			if err = questionsRepo.SaveQuestionTag(context.Background(), intQuestionID, tag); err != nil {
+				logger.Error("failed to save question tag", zap.Int("questionID", intQuestionID), zap.String("tag", tag), zap.Error(err))
 				return
 			}
 		}
 	}
 
+	logger.Info("data seeding completed successfully")
 }

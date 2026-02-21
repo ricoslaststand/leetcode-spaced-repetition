@@ -8,11 +8,11 @@ import (
 	config "leetcode-spaced-repetition/internal"
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/repositories"
-	"log"
 	"os"
 	"strconv"
 
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 )
 
 type Difficulty struct {
@@ -61,40 +61,37 @@ type Questions struct {
 }
 
 func main() {
+	logger := internal.NewLogger()
+	defer logger.Sync() //nolint:errcheck
+
 	config, err := config.GetConfig()
 	if err != nil {
-		return
+		logger.Fatal("failed to load config", zap.Error(err))
 	}
 
 	db, err := internal.GetDBConnFromConfig(config)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer db.Close()
 
-	fmt.Printf("Loading leetcode problems...")
+	logger.Info("loading leetcode problems")
 
 	filepath := "leetcode_problems.json"
 	fileContent, err := os.ReadFile(filepath)
 	if err != nil {
-		fmt.Println(err.Error())
-		panic(err)
+		logger.Fatal("failed to read problems file", zap.String("filepath", filepath), zap.Error(err))
 	}
 
-	fmt.Println("We are here")
-
 	var responseData ProblemData
-	err = json.Unmarshal(fileContent, &responseData)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
+	if err = json.Unmarshal(fileContent, &responseData); err != nil {
+		logger.Fatal("failed to unmarshal problems JSON", zap.Error(err))
 	}
 
 	numOfQuestions := len(responseData.StatStatusPairs)
+	logger.Info("downloaded problems", zap.Int("count", numOfQuestions))
 
-	questionRepo := repositories.NewQuestionPostgresRepository(db)
-
-	fmt.Printf("We have successfully downloaded %d problems\n", numOfQuestions)
+	questionRepo := repositories.NewQuestionPostgresRepository(db, logger)
 
 	var questions []models.Question
 	for i := 0; i < numOfQuestions; i++ {
@@ -106,7 +103,7 @@ func main() {
 		}
 		questionDifficulty, ok := difficultyMap[currQuestion.Difficulty.Level]
 		if !ok {
-			fmt.Printf("unrecognized difficulty level: %d\n", currQuestion.Difficulty.Level)
+			logger.Error("unrecognized difficulty level", zap.Int("level", currQuestion.Difficulty.Level))
 			return
 		}
 
@@ -119,43 +116,43 @@ func main() {
 		})
 	}
 
-	fmt.Println("Saving questions to the database")
+	logger.Info("saving questions to the database", zap.Int("count", len(questions)))
 
 	c := context.Background()
 
 	for i := 0; i < len(questions); i++ {
-		err = questionRepo.SaveQuestion(c, &questions[i])
-		if err != nil {
-			panic(err)
+		if err = questionRepo.SaveQuestion(c, &questions[i]); err != nil {
+			logger.Fatal("failed to save question", zap.Int("questionID", questions[i].ID), zap.Error(err))
 		}
 	}
 
 	// Adding question tags
 	tagsFileContent, err := os.ReadFile("merged_problems.json")
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		logger.Fatal("failed to read merged_problems.json", zap.Error(err))
 	}
 
 	var mergedQuestions Questions
-	err = json.Unmarshal(tagsFileContent, &mergedQuestions)
-	if err != nil {
-		panic(err)
+	if err = json.Unmarshal(tagsFileContent, &mergedQuestions); err != nil {
+		logger.Fatal("failed to unmarshal tags JSON", zap.Error(err))
 	}
 
 	for i := 0; i < len(mergedQuestions.Questions); i++ {
 		question := mergedQuestions.Questions[i]
 		questionId, err := strconv.Atoi(question.ID)
 		if err != nil {
-			fmt.Printf("Invalid questionId\n")
+			logger.Error("invalid question ID", zap.String("id", question.ID), zap.Error(err))
+			continue
 		}
 
 		for j := 0; j < len(question.Tags); j++ {
-			fmt.Printf("Processing questionId %d, tag %s\n", questionId, question.Tags[j])
-			err = questionRepo.SaveQuestionTag(c, questionId, question.Tags[j])
-			if err != nil {
-				panic(err)
+			logger.Debug("processing tag", zap.Int("questionID", questionId), zap.String("tag", question.Tags[j]))
+			if err = questionRepo.SaveQuestionTag(c, questionId, question.Tags[j]); err != nil {
+				logger.Fatal("failed to save question tag", zap.Int("questionID", questionId), zap.String("tag", question.Tags[j]), zap.Error(err))
 			}
 		}
 	}
+
+	logger.Info("load_leetcode_problems completed successfully")
+	fmt.Println()
 }

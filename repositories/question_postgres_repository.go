@@ -10,18 +10,28 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"go.uber.org/zap"
 
 	"leetcode-spaced-repetition/models"
 )
 
 type QuestionPostgresRepository struct {
-	db *sql.DB
+	db     *sql.DB
+	logger *zap.Logger
+}
+
+func NewQuestionPostgresRepository(db *sql.DB, logger *zap.Logger) *QuestionPostgresRepository {
+	return &QuestionPostgresRepository{
+		db:     db,
+		logger: logger,
+	}
 }
 
 // SaveQuestionSubmission implements QuestionRepository.
 func (r QuestionPostgresRepository) SaveQuestionSubmission(c context.Context, questionID int, userID uuid.UUID, date time.Time, timeTaken time.Duration, confidenceLevel models.ConfidenceLevel) error {
 	tx, err := r.db.BeginTx(c, nil)
 	if err != nil {
+		r.logger.Error("failed to begin transaction", zap.Error(err))
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
@@ -38,9 +48,10 @@ func (r QuestionPostgresRepository) SaveQuestionSubmission(c context.Context, qu
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23503" {
+			r.logger.Error("foreign key violation saving question submission", zap.Int("questionID", questionID), zap.Error(err))
 			return fmt.Errorf("foreign key violation: %v", pqErr.Message)
 		}
-
+		r.logger.Error("failed to save question submission", zap.Int("questionID", questionID), zap.Error(err))
 		return err
 	}
 
@@ -53,12 +64,6 @@ func (r QuestionPostgresRepository) GetAllQuestionsPastReviewDate(c context.Cont
 	return questions, nil
 }
 
-func NewQuestionPostgresRepository(db *sql.DB) *QuestionPostgresRepository {
-	return &QuestionPostgresRepository{
-		db: db,
-	}
-}
-
 func (r QuestionPostgresRepository) GetQuestions(ctx context.Context, tags []string, page, limit int) ([]models.Question, error) {
 	var questions []models.Question
 
@@ -67,6 +72,7 @@ func (r QuestionPostgresRepository) GetQuestions(ctx context.Context, tags []str
 		SELECT question_id FROM question_tags WHERE tag IN ($1)
 	) ORDER BY id LIMIT $2`, strings.Join(tags, ","), limit)
 	if err != nil {
+		r.logger.Error("failed to query questions", zap.Error(err))
 		return questions, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -75,6 +81,7 @@ func (r QuestionPostgresRepository) GetQuestions(ctx context.Context, tags []str
 		var question models.Question
 		err = rows.Scan(&question.ID, &question.Title, &question.Slug, &question.Difficulty)
 		if err != nil {
+			r.logger.Error("failed to scan question row", zap.Error(err))
 			return questions, err
 		}
 		questions = append(questions, question)
@@ -101,6 +108,7 @@ func (r QuestionPostgresRepository) GetQuestionByID(ctx context.Context, questio
 			Difficulty: difficulty,
 		}, nil
 	default:
+		r.logger.Error("failed to get question by ID", zap.Int("questionID", questionID), zap.Error(err))
 		return nil, err
 	}
 }
@@ -128,6 +136,7 @@ func (r QuestionPostgresRepository) GetQuestionSubmissions(ctx context.Context, 
 			ORDER BY submission_date DESC`,
 		)
 		if err != nil {
+			r.logger.Error("failed to query all question submissions", zap.Error(err))
 			return []models.QuestionSubmissionWithDetails{}, err
 		}
 		defer func() { _ = rows.Close() }()
@@ -145,6 +154,7 @@ func (r QuestionPostgresRepository) GetQuestionSubmissions(ctx context.Context, 
 				&sub.Question.Description,
 				&sub.Question.Difficulty,
 			); err != nil {
+				r.logger.Error("failed to scan question submission row", zap.Error(err))
 				return []models.QuestionSubmissionWithDetails{}, err
 			}
 
@@ -169,6 +179,7 @@ func (r QuestionPostgresRepository) GetQuestionSubmissions(ctx context.Context, 
 			pq.Array(questionID),
 		)
 		if err != nil {
+			r.logger.Error("failed to query question submissions by IDs", zap.Error(err))
 			return []models.QuestionSubmissionWithDetails{}, err
 		}
 		defer func() { _ = rows.Close() }()
@@ -185,6 +196,7 @@ func (r QuestionPostgresRepository) GetQuestionSubmissions(ctx context.Context, 
 				&sub.Question.Title,
 				&sub.Question.Description,
 			); err != nil {
+				r.logger.Error("failed to scan question submission row", zap.Error(err))
 				return []models.QuestionSubmissionWithDetails{}, err
 			}
 
@@ -212,6 +224,7 @@ func (r QuestionPostgresRepository) GetSubmissionsByQuestionID(c context.Context
 		questionID,
 	)
 	if err != nil {
+		r.logger.Error("failed to query submissions by question ID", zap.Int("questionID", questionID), zap.Error(err))
 		return []models.QuestionSubmission{}, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -226,6 +239,7 @@ func (r QuestionPostgresRepository) GetSubmissionsByQuestionID(c context.Context
 			&sub.TimeTaken,
 			&sub.ConfidenceLevel,
 		); err != nil {
+			r.logger.Error("failed to scan submission row", zap.Error(err))
 			return []models.QuestionSubmission{}, err
 		}
 
@@ -240,6 +254,9 @@ func (r QuestionPostgresRepository) SaveQuestion(c context.Context, q *models.Qu
 		"INSERT INTO questions (id, title, slug, description, difficulty) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING",
 		q.ID, q.Title, q.Slug, q.Description, q.Difficulty,
 	)
+	if err != nil {
+		r.logger.Error("failed to save question", zap.Int("questionID", q.ID), zap.Error(err))
+	}
 
 	return err
 }
@@ -249,6 +266,9 @@ func (r QuestionPostgresRepository) SaveQuestionTag(c context.Context, questionI
 		"INSERT INTO question_tags (question_id, tag) VALUES ($1, $2) ON CONFLICT (question_id, tag) DO NOTHING",
 		questionId, tag,
 	)
+	if err != nil {
+		r.logger.Error("failed to save question tag", zap.Int("questionID", questionId), zap.String("tag", tag), zap.Error(err))
+	}
 
 	return err
 }
@@ -256,6 +276,7 @@ func (r QuestionPostgresRepository) SaveQuestionTag(c context.Context, questionI
 func (r QuestionPostgresRepository) GetAllQuestionTags(ctx context.Context) ([]string, error) {
 	rows, err := r.db.QueryContext(ctx, "SELECT DISTINCT(tag) FROM question_tags ORDER BY tag")
 	if err != nil {
+		r.logger.Error("failed to query all question tags", zap.Error(err))
 		return []string{}, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -266,6 +287,7 @@ func (r QuestionPostgresRepository) GetAllQuestionTags(ctx context.Context) ([]s
 		var tag string
 		err = rows.Scan(&tag)
 		if err != nil {
+			r.logger.Error("failed to scan tag row", zap.Error(err))
 			return []string{}, err
 		}
 		tags = append(tags, tag)
@@ -277,6 +299,7 @@ func (r QuestionPostgresRepository) GetAllQuestionTags(ctx context.Context) ([]s
 func (r QuestionPostgresRepository) GetTagsForQuestion(ctx context.Context, id int) ([]string, error) {
 	rows, err := r.db.QueryContext(ctx, "SELECT tag FROM question_tags WHERE question_id = $1", id)
 	if err != nil {
+		r.logger.Error("failed to query tags for question", zap.Int("questionID", id), zap.Error(err))
 		return []string{}, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -287,6 +310,7 @@ func (r QuestionPostgresRepository) GetTagsForQuestion(ctx context.Context, id i
 		var tag string
 		err = rows.Scan(&tag)
 		if err != nil {
+			r.logger.Error("failed to scan tag row", zap.Error(err))
 			return []string{}, err
 		}
 		tags = append(tags, tag)

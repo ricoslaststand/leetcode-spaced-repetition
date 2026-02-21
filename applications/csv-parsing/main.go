@@ -8,13 +8,14 @@ import (
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/repositories"
 	"leetcode-spaced-repetition/services"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mgechev/revive/config"
+	"go.uber.org/zap"
 )
 
 const (
@@ -34,59 +35,61 @@ type recordSubmission struct {
 }
 
 func main() {
-	config, err := internal.GetConfig()
+	config, err := config.GetConfig()
 	if err != nil {
-		fmt.Println("Cannot access configuration")
-		return
+		panic("failed to load config")
 	}
+
+	logger := internal.NewLogger(config.AppEnv)
+	defer logger.Sync() //nolint:errcheck
+
 	db, err := internal.GetDBConnFromConfig(config)
 	if err != nil {
-		fmt.Println("Cannot construct DB")
-		return
+		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
+	defer db.Close()
 
-	fmt.Print("Constructing different domain layers...")
+	logger.Info("constructing domain layers")
 
-	questionsRepo := repositories.NewQuestionPostgresRepository(db)
-	questionsService := services.NewQuestionsService(questionsRepo)
+	questionsRepo := repositories.NewQuestionPostgresRepository(db, logger)
+	questionsService := services.NewQuestionsService(questionsRepo, logger)
 
 	file, err := os.Open("leetcode_submissions.csv")
 	if err != nil {
-		log.Fatalf("Error opening file: %v", err)
-		return
+		logger.Fatal("failed to open CSV file", zap.Error(err))
 	}
 	defer file.Close()
 
-	fmt.Println("Reading the leetcode submission files")
+	logger.Info("reading leetcode submission file")
 
 	reader := csv.NewReader(file)
 	records, err := reader.ReadAll()
 	if err != nil {
-		fmt.Println("Cannot read csv file")
-		panic(err)
+		logger.Fatal("failed to read CSV file", zap.Error(err))
 	}
 
-	fmt.Printf("There are %d rows in the file\n", len(records))
+	logger.Info("processing records", zap.Int("count", len(records)))
 
 	c := context.Background()
 
 	for i := 1; i < len(records); i++ {
-		fmt.Printf("Record: %+v\n", records[i])
+		logger.Debug("processing record", zap.Int("index", i), zap.Strings("record", records[i]))
 		submission, err := validateQuestionSubmission(records[i])
 		if err != nil {
-			fmt.Println(err.Error())
+			logger.Error("invalid submission record", zap.Int("index", i), zap.Error(err))
 			continue
 		}
 
 		userID, _ := uuid.NewUUID()
 
-		err = questionsService.SaveQuestionSubmission(c, submission.questionNumber, userID, submission.submissionDate, submission.timeTaken, submission.confidenceLevel)
-		if err != nil {
-			fmt.Println(err.Error())
+		if err = questionsService.SaveQuestionSubmission(c, submission.questionNumber, userID, submission.submissionDate, submission.timeTaken, submission.confidenceLevel); err != nil {
+			logger.Error("failed to save question submission", zap.Int("questionNumber", submission.questionNumber), zap.Error(err))
 		} else {
-			fmt.Println("Successfully created question submission")
+			logger.Info("saved question submission", zap.Int("questionNumber", submission.questionNumber))
 		}
 	}
+
+	logger.Info("CSV parsing completed successfully")
 }
 
 func validateQuestionSubmission(r []string) (recordSubmission, error) {

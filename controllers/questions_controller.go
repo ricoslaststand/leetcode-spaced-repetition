@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/services"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 const dateRegexString = `^\d{4}-\d{2}-\d{2}T\d{2}`
@@ -25,8 +25,8 @@ type getSubmissionsRequest struct {
 }
 
 type saveQuestionSubmissionRequest struct {
-	QuestionID      int `json:"questionId" binding:"required,number" validate:"gte=1"`
-	TimeTaken       int `json:"timeTaken" binding:"required,number" validate:"gte=0"`
+	QuestionID      int    `json:"questionId" binding:"required,number" validate:"gte=1"`
+	TimeTaken       int    `json:"timeTaken" binding:"required,number" validate:"gte=0"`
 	ConfidenceLevel string `json:"confidenceLevel" binding:"required"`
 }
 
@@ -42,14 +42,15 @@ var validDate validator.Func = func(fl validator.FieldLevel) bool {
 
 type QuestionsController struct {
 	questionsService services.QuestionService
+	logger           *zap.Logger
 }
 
-func RegisterRoutes(r *gin.Engine, questionsService *services.QuestionService) {
+func RegisterRoutes(r *gin.Engine, questionsService *services.QuestionService, logger *zap.Logger) {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation("date", validDate)
 	}
 
-	questionsController := QuestionsController{questionsService: *questionsService}
+	questionsController := QuestionsController{questionsService: *questionsService, logger: logger}
 
 	questionsGroup := r.Group("/questions")
 	questionsGroup.GET("", questionsController.getQuestions)
@@ -76,7 +77,7 @@ func (c QuestionsController) getQuestions(ctx *gin.Context) {
 
 	questions, err := c.questionsService.GetQuestions(ctx, tags, 1, 100)
 	if err != nil {
-		fmt.Printf("err:", err.Error())
+		c.logger.Error("failed to get questions", zap.Error(err))
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": "An error has occurred.",
 		})
@@ -118,6 +119,7 @@ func (c QuestionsController) GetQuestionByID(context *gin.Context) {
 
 	question, err := c.questionsService.GetQuestionByID(context, questionID)
 	if err != nil {
+		c.logger.Error("failed to get question by ID", zap.Int("questionID", questionID), zap.Error(err))
 		context.JSON(500, gin.H{
 			"error": "An internal server has occurred.",
 		})
@@ -132,6 +134,7 @@ func (c QuestionsController) GetQuestionByID(context *gin.Context) {
 
 	tags, err := c.questionsService.GetTagsForQuestion(context, questionID)
 	if err != nil {
+		c.logger.Error("failed to get tags for question", zap.Int("questionID", questionID), zap.Error(err))
 		context.JSON(500, gin.H{
 			"error": "An internal server error has occurred.",
 		})
@@ -167,7 +170,7 @@ func (c QuestionsController) getQuestionSubmissions(context *gin.Context) {
 		request.ID,
 	)
 	if err != nil {
-		fmt.Printf("err = %+v\n", err)
+		c.logger.Error("failed to get question submissions", zap.Int("questionID", request.ID), zap.Error(err))
 		context.JSON(500, gin.H{
 			"error": "An internal server error occurred.",
 		})
@@ -196,6 +199,7 @@ func (c QuestionsController) getQuestionSubmissions(context *gin.Context) {
 func (c QuestionsController) GetAllQuestionTags(context *gin.Context) {
 	tags, err := c.questionsService.GetAllQuestionTags(context)
 	if err != nil {
+		c.logger.Error("failed to get all question tags", zap.Error(err))
 		context.JSON(500, gin.H{
 			"error": "An internal server error has occurred.",
 		})
@@ -235,6 +239,7 @@ func (c QuestionsController) SaveQuestionSubmission(context *gin.Context) {
 		time.Duration(questionSubmissionRequest.TimeTaken*int(time.Second)),
 		models.ConfidenceLevel(questionSubmissionRequest.ConfidenceLevel),
 	); err != nil {
+		c.logger.Error("failed to save question submission", zap.Int("questionID", questionSubmissionRequest.QuestionID), zap.Error(err))
 		context.JSON(500, gin.H{
 			"error": "An internal error has occurred.",
 		})
@@ -257,7 +262,6 @@ func (c QuestionsController) SaveQuestionSubmission(context *gin.Context) {
 // @Failure      500         {object}  map[string]string
 // @Router       /questions/submissions [get]
 func (c QuestionsController) getAllQuestionSubmissions(context *gin.Context) {
-	// questionIDsParam, exists := context.GetQueryArray("questionId")
 	var request getSubmissionsRequest
 	if err := context.ShouldBindQuery(&request); err != nil {
 		context.JSON(400, gin.H{
@@ -269,6 +273,7 @@ func (c QuestionsController) getAllQuestionSubmissions(context *gin.Context) {
 
 	submissions, err := c.questionsService.GetQuestionSubmissions(context, questionIDs)
 	if err != nil {
+		c.logger.Error("failed to get all question submissions", zap.Error(err))
 		context.JSON(500, gin.H{
 			"error": "An internal server error has occurred.",
 		})

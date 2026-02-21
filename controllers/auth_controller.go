@@ -6,10 +6,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type AuthController struct {
 	authService services.AuthService
+	logger      *zap.Logger
 }
 
 type loginRequestBody struct {
@@ -17,9 +19,10 @@ type loginRequestBody struct {
 	password string `json:"password" binding:"required"`
 }
 
-func NewAuthController(authService services.AuthService) *AuthController {
+func NewAuthController(authService services.AuthService, logger *zap.Logger) *AuthController {
 	return &AuthController{
 		authService: authService,
+		logger:      logger,
 	}
 }
 
@@ -45,6 +48,7 @@ func (c AuthController) Login(ctx *gin.Context) {
 
 	isValid, err := c.authService.Login(ctx, body.email, body.password)
 	if err != nil {
+		c.logger.Error("login failed", zap.Error(err))
 		utils.FormatErrorBody(ctx, http.StatusInternalServerError, "An internal server error occurred.")
 		return
 	}

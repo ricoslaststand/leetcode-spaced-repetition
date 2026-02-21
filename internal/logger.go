@@ -1,29 +1,23 @@
 package internal
 
 import (
-	"sync"
-
 	"go.uber.org/zap"
 )
 
-type Logger struct {
-	Logger *zap.Logger
+func NewLogger(environment string) *zap.Logger {
+	var (
+		logger *zap.Logger
+		err    error
+	)
+
+	if environment == "development" {
+		logger, err = zap.NewDevelopment()
+	} else {
+		logger, err = zap.NewProduction()
+	}
+
+	if err != nil {
+		panic("failed to initialize logger: " + err.Error())
+	}
+	return logger
 }
-
-var (
-	instance *zap.Logger
-	once     sync.Once
-)
-
-// func GetInstance() *Logger {
-// 	once.Do(func() {
-// 		// Create a production logger (JSON format)
-// 		zapLogger, err := zap.NewProduction()
-// 		if err != nil {
-// 			panic("failed to initialize logger: " + err.Error())
-// 		}
-
-// 		instance = &Logger{Logger: zapLogger}
-// 	})
-// 	return instance
-// }

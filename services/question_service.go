@@ -7,45 +7,73 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type QuestionService struct {
 	questionRepo repositories.QuestionRepository
+	logger       *zap.Logger
 }
 
-func NewQuestionsService(questionsRepo repositories.QuestionRepository) *QuestionService {
+func NewQuestionsService(questionsRepo repositories.QuestionRepository, logger *zap.Logger) *QuestionService {
 	return &QuestionService{
 		questionRepo: questionsRepo,
+		logger:       logger,
 	}
 }
 
 func (s QuestionService) GetQuestions(ctx context.Context, tags []string, page int, limit int) ([]models.Question, error) {
-	return s.questionRepo.GetQuestions(ctx, tags, page, limit)
+	questions, err := s.questionRepo.GetQuestions(ctx, tags, page, limit)
+	if err != nil {
+		s.logger.Error("failed to get questions", zap.Error(err))
+	}
+	return questions, err
 }
 
 func (s QuestionService) GetQuestionByID(c context.Context, ID int) (*models.Question, error) {
-	return s.questionRepo.GetQuestionByID(c, ID)
+	question, err := s.questionRepo.GetQuestionByID(c, ID)
+	if err != nil {
+		s.logger.Error("failed to get question by ID", zap.Int("questionID", ID), zap.Error(err))
+	}
+	return question, err
 }
 
 func (s QuestionService) GetQuestionSubmissions(c context.Context, questionIDs []int) ([]models.QuestionSubmissionWithDetails, error) {
-	return s.questionRepo.GetQuestionSubmissions(c, questionIDs)
+	submissions, err := s.questionRepo.GetQuestionSubmissions(c, questionIDs)
+	if err != nil {
+		s.logger.Error("failed to get question submissions", zap.Error(err))
+	}
+	return submissions, err
 }
 
 func (s QuestionService) GetAllQuestionTags(c context.Context) ([]string, error) {
-	return s.questionRepo.GetAllQuestionTags(c)
+	tags, err := s.questionRepo.GetAllQuestionTags(c)
+	if err != nil {
+		s.logger.Error("failed to get all question tags", zap.Error(err))
+	}
+	return tags, err
 }
 
 func (s QuestionService) GetTagsForQuestion(c context.Context, ID int) ([]string, error) {
-	return s.questionRepo.GetTagsForQuestion(c, ID)
+	tags, err := s.questionRepo.GetTagsForQuestion(c, ID)
+	if err != nil {
+		s.logger.Error("failed to get tags for question", zap.Int("questionID", ID), zap.Error(err))
+	}
+	return tags, err
 }
 
 func (s QuestionService) GetAllQuestionsPastReviewDate(c context.Context, limit uint) ([]models.Question, error) {
-	return s.questionRepo.GetAllQuestionsPastReviewDate(c, limit)
+	questions, err := s.questionRepo.GetAllQuestionsPastReviewDate(c, limit)
+	if err != nil {
+		s.logger.Error("failed to get questions past review date", zap.Error(err))
+	}
+	return questions, err
 }
 
 func (s QuestionService) GetAllSubmissionsForQuestion(c context.Context, questionID int) ([]models.QuestionSubmission, error) {
 	submissions, err := s.questionRepo.GetSubmissionsByQuestionID(c, questionID)
 	if err != nil {
+		s.logger.Error("failed to get submissions for question", zap.Int("questionID", questionID), zap.Error(err))
 		return []models.QuestionSubmission{}, err
 	}
 
@@ -60,5 +88,9 @@ func (s QuestionService) SaveQuestionSubmission(
 	timeTaken time.Duration,
 	confidenceLevel models.ConfidenceLevel,
 ) error {
-	return s.questionRepo.SaveQuestionSubmission(c, questionID, userID, date, timeTaken, confidenceLevel)
+	err := s.questionRepo.SaveQuestionSubmission(c, questionID, userID, date, timeTaken, confidenceLevel)
+	if err != nil {
+		s.logger.Error("failed to save question submission", zap.Int("questionID", questionID), zap.Error(err))
+	}
+	return err
 }

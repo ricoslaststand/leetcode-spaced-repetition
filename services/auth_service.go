@@ -4,11 +4,13 @@ import (
 	"context"
 	"leetcode-spaced-repetition/repositories"
 
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
 	userRepository repositories.UserRepository
+	logger         *zap.Logger
 }
 
 type newUser struct {
@@ -16,13 +18,14 @@ type newUser struct {
 	password string `v`
 }
 
-func NewAuthService() *AuthService {
-	return &AuthService{}
+func NewAuthService(logger *zap.Logger) *AuthService {
+	return &AuthService{logger: logger}
 }
 
 func (a AuthService) Login(ctx context.Context, email string, password string) (bool, error) {
 	passwordHash, err := a.userRepository.GetPasswordHashByEmail(ctx, email)
 	if err != nil {
+		a.logger.Error("failed to get password hash during login", zap.String("email", email), zap.Error(err))
 		return false, err
 	}
 
@@ -41,10 +44,16 @@ func (a AuthService) Logout() {
 func (a AuthService) RegisterUser(ctx context.Context, email string, password string) error {
 	hash, err := a.hashAndSaltPassword(password)
 	if err != nil {
+		a.logger.Error("failed to hash password during registration", zap.String("email", email), zap.Error(err))
 		return err
 	}
 
-	return a.userRepository.CreateUser(ctx, email, hash)
+	if err := a.userRepository.CreateUser(ctx, email, hash); err != nil {
+		a.logger.Error("failed to create user", zap.String("email", email), zap.Error(err))
+		return err
+	}
+
+	return nil
 }
 
 func (a AuthService) hashAndSaltPassword(plainPassword string) (string, error) {

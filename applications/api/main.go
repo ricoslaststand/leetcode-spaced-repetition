@@ -12,7 +12,6 @@ import (
 	config "leetcode-spaced-repetition/internal"
 	"leetcode-spaced-repetition/repositories"
 	"leetcode-spaced-repetition/services"
-	"log"
 
 	_ "leetcode-spaced-repetition/docs"
 
@@ -22,31 +21,34 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
 )
 
 func main() {
 	config, err := config.GetConfig()
 	if err != nil {
-		panic(err)
+		panic("failed to load config")
 	}
+
+	logger := internal.NewLogger(config.AppEnv)
+	defer logger.Sync() //nolint:errcheck
 
 	db, err := internal.GetDBConnFromConfig(config)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer db.Close()
 
-	err = db.Ping()
-	if err != nil {
-		fmt.Printf("There is an error pinging the database: %s", err.Error())
+	if err = db.Ping(); err != nil {
+		logger.Error("failed to ping database", zap.Error(err))
 	}
 
-	questionsRepo := repositories.NewQuestionPostgresRepository(db)
-	questionsService := services.NewQuestionsService(questionsRepo)
+	questionsRepo := repositories.NewQuestionPostgresRepository(db, logger)
+	questionsService := services.NewQuestionsService(questionsRepo, logger)
 
 	router := gin.Default()
 	router.Use(cors.Default()) // All origins allowed by default
-	fmt.Println("CORS is enabled....")
+	logger.Info("CORS is enabled")
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
@@ -60,8 +62,12 @@ func main() {
 	})
 	p.Use(router)
 
-	controllers.RegisterRoutes(router, questionsService)
+	controllers.RegisterRoutes(router, questionsService, logger)
 
 	// TODO: Turn this into a configurable port
-	router.Run(":8000")
+	logger.Info("starting API server", zap.String("port", ":8000"))
+	if err := router.Run(":8000"); err != nil {
+		logger.Fatal("server failed", zap.Error(err))
+	}
+	fmt.Println()
 }
