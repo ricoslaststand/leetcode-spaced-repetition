@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import parse from 'parse-duration'
 import { toast } from "sonner"
 
-
 import type { ConfidenceLevel as ConfidenceLevelType } from '../models/Question';
 import { ConfidenceLevel, confidenceLevelToString } from '../models/Question';
 import { Input } from '../components/ui/input';
@@ -15,28 +14,26 @@ import { Field, FieldGroup, FieldLabel } from '../components/ui/field';
 import { Button } from '../components/ui/button';
 import { createQuestionSubmission } from '../api';
 
-const ConfidenceLevelMemes: { level: ConfidenceLevelType; meme: string; text: string }[] = [
+const ConfidenceLevelMemes: { level: ConfidenceLevelType; text: string }[] = [
     {
         level: ConfidenceLevel.Again,
-        meme: "simpsons_repeat_stuff.gif",
         text: "I have no clue what's going on"
     },
     {
         level: ConfidenceLevel.Hard,
-        meme: "drake_explaining.gif",
         text: "I see how they did it, but I did not see that coming"
     },
     {
         level: ConfidenceLevel.Good,
-        meme: "exploding_brain.gif",
         text: "Things are starting to click..."
     },
     {
         level: ConfidenceLevel.Easy,
-        meme: "great_gatsy_nod.gif",
         text: "You did it, buddy"
     }
 ]
+
+const confidenceLevelLabels = ["Again", "Hard", "Good", "Easy"]
 
 const formSchema = z.object({
     questionId: z.string(),
@@ -59,70 +56,86 @@ const QuestionSubmissionPage: React.FC = () => {
             confidenceLevelToString(data.confidenceLevel as ConfidenceLevelType),
             data.timeTaken
         )
-        toast.success("Question submission created!")
+        toast.success("Submission logged!")
         form.reset()
     }
 
     return (
-        <div>
-            <h1>Which question did you complete today?</h1>
-            <div className="my-4">
-                <form onSubmit={form.handleSubmit(onSubmit)} >
+        <div className="max-w-lg">
+            <h1 className="text-2xl font-semibold tracking-tight mb-6">
+                Log a submission
+            </h1>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+                <Controller
+                    name="questionId"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                            <FieldLabel htmlFor={field.name}>Question #</FieldLabel>
+                            <Input
+                                {...field}
+                                placeholder="e.g. 42"
+                                aria-invalid={fieldState.invalid}
+                            />
+                        </Field>
+                    )}
+                />
+
+                <FieldGroup className="grid grid-cols-2 gap-6 my-6">
                     <Controller
-                        name="questionId"
+                        name="confidenceLevel"
                         control={form.control}
-                        render={({ field, fieldState }) => (
-                            <Field data-invalid={fieldState.invalid}>
-                                <FieldLabel htmlFor={field.name}>Question #</FieldLabel>
-                                <Input
-                                    {...field}
-                                    aria-invalid={fieldState.invalid}
-                                />
-                            </Field>
-                        )}
-                    />
-                    <FieldGroup className="grid grid-cols-2 my-4">
-                        <Controller
-                            name="confidenceLevel"
-                            control={form.control}
-                            render={({ field }) => (
-                                <Field>
-                                    <FieldLabel>ConfidenceLevel</FieldLabel>
+                        render={({ field }) => (
+                            <Field>
+                                <FieldLabel>Confidence Level</FieldLabel>
+                                <div className="pt-2">
                                     <Slider
                                         value={[field.value]}
                                         step={1}
                                         min={ConfidenceLevel.Again}
                                         max={ConfidenceLevel.Easy}
-                                        onValueChange={val=> field.onChange(val[0])}
+                                        onValueChange={val => field.onChange(val[0])}
                                     />
-                                    <p>{ConfidenceLevelMemes[field.value - 1].text}</p>
-                                </Field>
-                            )}
-                        />
-                        <Controller
-                            name="timeTaken"
-                            control={form.control}
-                            render={({ field }) => (
-                                <Field>
-                                    <FieldLabel htmlFor="timeTaken">Time Taken</FieldLabel>
-                                    <Input
-                                        id="timeTaken"
-                                        onBlur={e => {
-                                            const value = parse(e.currentTarget.value)
-                                            if (value !== null) {
-                                                field.onChange(Math.floor(value / 1_000))
-                                            } else {
-                                                field.onChange(undefined)
-                                            }                                            
-                                        }}
-                                    />
-                                </Field>
-                            )}
-                        />
-                    </FieldGroup>
-                    <Button disabled={!form.formState.isValid} type="submit" variant="outline">Create Submission</Button>
-                </form>
-            </div>
+                                </div>
+                                <div className="mt-2">
+                                    <span className="text-sm font-medium">
+                                        {confidenceLevelLabels[field.value - 1]}
+                                    </span>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        {ConfidenceLevelMemes[field.value - 1].text}
+                                    </p>
+                                </div>
+                            </Field>
+                        )}
+                    />
+
+                    <Controller
+                        name="timeTaken"
+                        control={form.control}
+                        render={({ field }) => (
+                            <Field>
+                                <FieldLabel htmlFor="timeTaken">Time Taken</FieldLabel>
+                                <Input
+                                    id="timeTaken"
+                                    placeholder="e.g. 15m30s"
+                                    onBlur={e => {
+                                        const value = parse(e.currentTarget.value)
+                                        if (value !== null) {
+                                            field.onChange(Math.floor(value / 1_000))
+                                        } else {
+                                            field.onChange(undefined)
+                                        }
+                                    }}
+                                />
+                            </Field>
+                        )}
+                    />
+                </FieldGroup>
+
+                <Button disabled={!form.formState.isValid} type="submit">
+                    Log Submission
+                </Button>
+            </form>
         </div>
     )
 }

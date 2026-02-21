@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make lint:*)",
+      "Bash(golangci-lint run:*)",
+      "WebSearch",
+      "Bash(go get:*)",
+      "Bash(go install:*)",
+      "Bash(swag init:*)",
+      "Bash(go build:*)",
+      "Bash(python3:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(go run:*)",
+      "Bash(go test:*)",
+      "Bash(git:*)",
+      "Bash(tail:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

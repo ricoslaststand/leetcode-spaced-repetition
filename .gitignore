@@ -35,3 +35,6 @@ go.work.sum
 node_modules
 
 tmp
+
+# TypeScript output
+dist

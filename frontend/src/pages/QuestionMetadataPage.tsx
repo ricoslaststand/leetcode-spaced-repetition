@@ -12,16 +12,22 @@ const QuestionMetadataPage: FC = () => {
         select: (params) => params.questionId
     });
 
-    const { data, isLoading, error } = useQuestionSubmissions(questionId)
+    const { data, isLoading } = useQuestionSubmissions(questionId)
 
     return (
         <div>
-            {
-                isLoading ? <Spinner /> : null
-            }
-            {
-                data ? <QuestionSubmissionsTable submissions={data.data} /> : null
-            }
+            <h1 className="text-2xl font-semibold tracking-tight mb-6">
+                Submission History
+                <span className="text-muted-foreground font-normal text-lg ml-2">
+                    #{questionId}
+                </span>
+            </h1>
+            {isLoading && (
+                <div className="flex justify-center py-12">
+                    <Spinner />
+                </div>
+            )}
+            {data && <QuestionSubmissionsTable submissions={data.data} />}
         </div>
     )
 }

@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 
 import { getAllQuestions } from "../api";
 import { Badge } from "../components/ui/badge";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -17,38 +16,31 @@ import { Button } from "../components/ui/button";
 import { useQuestionTags } from "../hooks/api";
 import { generateLinkForLeetcode } from "../lib/leetcodeUtils";
 
-const baseBadgeClass = "cursor-pointer"
+const difficultyColor = (d: string) =>
+  d === "Easy" ? "text-emerald-600 font-medium" :
+  d === "Medium" ? "text-amber-500 font-medium" :
+  "text-red-500 font-medium"
 
 const QuestionsPage = () => {
     const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
     const [questions, setQuestions] = useState<any[]>([])
     const [isMetaSelected, setIsCtrlSelected] = useState<boolean>(false)
 
-    const navigate = useNavigate({ from: '/questions' })
-
-    const { data, isLoading, error } = useQuestionTags()
+    const { data } = useQuestionTags()
 
     useEffect(() => {
-        (
-            async () => {
-                const data = await getAllQuestions(Array.from(selectedTags))
-                console.log("data =", data)
-                setQuestions(data?.data || []);
-            }
-        )()
+        (async () => {
+            const data = await getAllQuestions(Array.from(selectedTags))
+            setQuestions(data?.data || []);
+        })()
 
         const handleDownPress = (event: KeyboardEvent) => {
-            if (event.metaKey) {
-                setIsCtrlSelected(true)
-            }
+            if (event.metaKey) setIsCtrlSelected(true)
         }
 
         const handleUpPress = (event: KeyboardEvent) => {
-            if (event.metaKey) {
-                setIsCtrlSelected(true)
-            } else {
-                setIsCtrlSelected(false)
-            }
+            if (event.metaKey) setIsCtrlSelected(true)
+            else setIsCtrlSelected(false)
         }
 
         window.addEventListener("keyup", handleUpPress)
@@ -63,14 +55,9 @@ const QuestionsPage = () => {
     const handleTopicClick = (tag: string) => {
         if (isMetaSelected) {
             if (selectedTags.has(tag)) {
-                setSelectedTags(
-                    new Set([...selectedTags].filter(t => t !== tag))
-                )
+                setSelectedTags(new Set([...selectedTags].filter(t => t !== tag)))
             } else {
-                console.log("adding tag:", tag)
-                setSelectedTags(
-                    new Set([...selectedTags, tag])
-                )        
+                setSelectedTags(new Set([...selectedTags, tag]))
             }
         } else {
             setSelectedTags(new Set([tag]))
@@ -78,60 +65,84 @@ const QuestionsPage = () => {
     }
 
     return (
-        <div className="absolute inset-0 w-9/10 mx-auto">
-            <div>Questions Page</div>
-            <div>
-                {
-                    (data?.tags || []).map(tag => (
-                        <Badge
-                            key={tag}
-                            variant={(selectedTags.has(tag)) ? "secondary" : "outline"}
-                            onClick={() => handleTopicClick(tag)}
-                            className={selectedTags.has(tag) ? cn("bg-blue-500", "text-white", baseBadgeClass) : baseBadgeClass}>
-                                {tag}
-                        </Badge>
-                    ))
-                }
+        <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Questions</h1>
+
+            <div className="flex flex-wrap gap-2 mt-4">
+                {((data as any)?.tags || []).map((tag: string) => (
+                    <Badge
+                        key={tag}
+                        variant={selectedTags.has(tag) ? "secondary" : "outline"}
+                        onClick={() => handleTopicClick(tag)}
+                        className={cn(
+                            "cursor-pointer select-none",
+                            selectedTags.has(tag) && "bg-primary text-primary-foreground hover:bg-primary/90"
+                        )}
+                    >
+                        {tag}
+                    </Badge>
+                ))}
             </div>
-            <div>
-                <Button variant="outline" onClick={() => navigate({ to: "/" })}>Create Submission</Button>
-                <Button className="my-4" variant="outline" onClick={() => setSelectedTags(new Set([]))}>Clear Topics</Button>
+
+            <div className="flex items-center gap-2 mt-4 mb-6">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedTags(new Set([]))}
+                    disabled={selectedTags.size === 0}
+                >
+                    Clear Topics
+                </Button>
             </div>
-            <div>
-                <Table>
-                    {
-                        (selectedTags.size  === 0) ?
-                        <TableCaption>Please select a topic.</TableCaption> :
-                        null
-                    }
-                    <TableHeader>
+
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-24">#</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Difficulty</TableHead>
+                        <TableHead>Submissions</TableHead>
+                        <TableHead>LeetCode</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {questions.length === 0 && selectedTags.size === 0 ? (
                         <TableRow>
-                            <TableHead className="w-[100px]">Question #</TableHead>
-                            <TableHead className="w-[100px] text-left">Title</TableHead>
-                            <TableHead className="text-left">Difficulty</TableHead>
-                            <TableHead className="text-left">Open Submissions</TableHead>
-                            <TableHead className="text-left">Open Link in LeetCode</TableHead>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                Select a topic above to browse questions.
+                            </TableCell>
                         </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {
-                            questions.map(question => (
-                                <TableRow>
-                                    <TableCell className="text-left">{question.id}</TableCell>
-                                    <TableCell className="font-medium text-left">{question.title}</TableCell>
-                                    <TableCell className="text-left">{question.difficulty}</TableCell>
-                                    <TableCell className="text-left">
-                                        <Link to={`/questions/${question.id}`}>Open Submissions</Link>
-                                    </TableCell>
-                                    <TableCell className="text-left">
-                                        <a href={generateLinkForLeetcode(question.slug)} target="_blank">Open</a>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        }
-                    </TableBody>
-                </Table>
-            </div>
+                    ) : (
+                        questions.map(question => (
+                            <TableRow key={question.id}>
+                                <TableCell className="text-muted-foreground">{question.id}</TableCell>
+                                <TableCell className="font-medium">{question.title}</TableCell>
+                                <TableCell className={difficultyColor(question.difficulty)}>
+                                    {question.difficulty}
+                                </TableCell>
+                                <TableCell>
+                                    <Link
+                                        to={`/questions/${question.id}`}
+                                        className="text-sm text-primary underline-offset-4 hover:underline"
+                                    >
+                                        View
+                                    </Link>
+                                </TableCell>
+                                <TableCell>
+                                    <a
+                                        href={generateLinkForLeetcode(question.slug)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-sm text-primary underline-offset-4 hover:underline"
+                                    >
+                                        Open
+                                    </a>
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    )}
+                </TableBody>
+            </Table>
         </div>
     );
 }
