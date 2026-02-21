@@ -65,3 +65,6 @@ watch:
                 exit 1; \
             fi; \
         fi
+
+lint-frontend:
+	@npx -y react-doctor@latest frontend
