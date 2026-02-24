@@ -185,7 +185,7 @@ func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (mod
 			continue
 		}
 
-		if err := s.problemRepo.SaveProblemSubmission(ctx, problemNumber, uuid.New(), submissionDate, timeTaken, confidenceLevel); err != nil {
+		if err := s.problemRepo.SaveProblemSubmission(ctx, problemNumber, uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"), submissionDate, timeTaken, confidenceLevel); err != nil {
 			s.logger.Error("failed to save imported submission",
 				zap.Int("row", rowNumber),
 				zap.Int("problemID", problemNumber),
