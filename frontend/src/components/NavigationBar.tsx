@@ -25,7 +25,7 @@ export function MainNav() {
 
           <NavigationMenuItem>
             <NavigationMenuLink
-              href="/submissions"
+              href="/problems/submissions"
               className={navigationMenuTriggerStyle()}
             >
               Submissions

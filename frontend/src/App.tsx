@@ -4,6 +4,7 @@ import { createRootRoute, createRoute, createRouter, redirect, RouterProvider } 
 import ProblemSubmissionPage from './pages/ProblemSubmissionPage'
 import ProblemsPage from './pages/ProblemsPage'
 import ProblemMetadataPage from './pages/ProblemMetadataPage'
+import ListProblemSubmissionsPage from './pages/ListProblemSubmissionsPage'
 import { Toaster } from 'sonner'
 import { AuthenticatedLayout } from './layouts/AuthenticatedLayout'
 
@@ -20,12 +21,6 @@ const homeRedirectRoute = createRoute({
   beforeLoad: () => { throw redirect({ to: '/problems' }) }
 })
 
-const problemSubmissionsRoute = createRoute({
-  getParentRoute: () => layoutRoute,
-  path: 'submissions',
-  component: () => <ProblemSubmissionPage />
-})
-
 const problemsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'problems',
@@ -37,20 +32,33 @@ const problemsListRoute = createRoute({
   component: () => <ProblemsPage />,
 })
 
-const problemMetadataRoute = createRoute({
+const allSubmissionsRoute = createRoute({
   getParentRoute: () => problemsRoute,
-  path: '$problemId',
+  path: 'submissions',
+  component: () => <ListProblemSubmissionsPage />
+})
+
+const newSubmissionRoute = createRoute({
+  getParentRoute: () => problemsRoute,
+  path: 'submissions/new',
+  component: () => <ProblemSubmissionPage />
+})
+
+const problemSubmissionsRoute = createRoute({
+  getParentRoute: () => problemsRoute,
+  path: '$problemId/submissions',
   component: () => <ProblemMetadataPage />
 })
 
 const routeTree = rootRoute.addChildren([
   layoutRoute.addChildren([
     homeRedirectRoute,
-    problemSubmissionsRoute,
   ]),
   problemsRoute.addChildren([
     problemsListRoute,
-    problemMetadataRoute
+    allSubmissionsRoute,
+    newSubmissionRoute,
+    problemSubmissionsRoute,
   ]),
 ])
 const router = createRouter({ routeTree })

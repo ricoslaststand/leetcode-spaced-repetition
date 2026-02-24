@@ -119,7 +119,7 @@ const ProblemsPage = () => {
                                 </TableCell>
                                 <TableCell>
                                     <Link
-                                        to={`/problems/${problem.id}`}
+                                        to={`/problems/${problem.id}/submissions`}
                                         className="text-sm text-primary underline-offset-4 hover:underline"
                                     >
                                         View
