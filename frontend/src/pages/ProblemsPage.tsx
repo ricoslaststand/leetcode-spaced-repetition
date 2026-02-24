@@ -16,10 +16,12 @@ import { Button } from "../components/ui/button";
 import { useProblemTopics } from "../hooks/api";
 import { generateLinkForLeetcode } from "../lib/leetcodeUtils";
 
-const difficultyColor = (d: string) =>
-  d === "Easy" ? "text-emerald-600 font-medium" :
-  d === "Medium" ? "text-amber-500 font-medium" :
-  "text-red-500 font-medium"
+const difficultyBadgeClass = (d: string) => {
+  const normalized = d.toLowerCase()
+  if (normalized === "easy") return "bg-green-100 text-green-700 border-green-200"
+  if (normalized === "medium") return "bg-yellow-100 text-yellow-700 border-yellow-200"
+  return "bg-red-100 text-red-700 border-red-200"
+}
 
 const ProblemsPage = () => {
     const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set())
@@ -117,8 +119,10 @@ const ProblemsPage = () => {
                             <TableRow key={problem.id}>
                                 <TableCell className="text-muted-foreground">{problem.id}</TableCell>
                                 <TableCell className="font-medium">{problem.title}</TableCell>
-                                <TableCell className={difficultyColor(problem.difficulty)}>
-                                    {problem.difficulty}
+                                <TableCell>
+                                    <Badge className={difficultyBadgeClass(problem.difficulty)}>
+                                        {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1).toLowerCase()}
+                                    </Badge>
                                 </TableCell>
                                 <TableCell>
                                     <Link
