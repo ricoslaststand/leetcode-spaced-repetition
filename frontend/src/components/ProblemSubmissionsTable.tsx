@@ -6,21 +6,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+import ConfidenceLevelTag from "@/components/ConfidenceLevelTag"
 
 type ProblemSubmissionsTableProps = {
     submissions: any[]
 };
-
-const confidenceBadgeVariant = (level: string): "default" | "secondary" | "destructive" | "outline" => {
-    switch (level?.toLowerCase()) {
-        case "easy": return "default"
-        case "good": return "secondary"
-        case "hard": return "outline"
-        case "again": return "destructive"
-        default: return "outline"
-    }
-}
 
 const formatTimeTaken = (seconds: number): string => {
     if (!seconds) return "—"
@@ -64,9 +54,7 @@ export default function ProblemSubmissionsTable({ submissions }: ProblemSubmissi
                                 {formatDate(submission.date)}
                             </TableCell>
                             <TableCell>
-                                <Badge variant={confidenceBadgeVariant(submission.confidenceLevel)}>
-                                    {submission.confidenceLevel}
-                                </Badge>
+                                <ConfidenceLevelTag confidenceLevel={submission.confidenceLevel} />
                             </TableCell>
                             <TableCell className="text-right text-sm text-muted-foreground">
                                 {formatTimeTaken(submission.timeTaken)}

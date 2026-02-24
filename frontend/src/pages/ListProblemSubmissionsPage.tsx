@@ -12,6 +12,7 @@ import {
 import { getProblemSubmissionsV2 } from "../api";
 import { Button } from "../components/ui/button";
 import ProblemDifficultyTag from "../components/ProblemDifficultyTag";
+import ConfidenceLevelTag from "../components/ConfidenceLevelTag";
 import { generateLeetcodeURL } from "../lib/leetcodeUtils";
 
 const formatDate = (dateStr: string): string => {
@@ -57,6 +58,7 @@ const ListProblemSubmissionsPage = () => {
                         <TableHead className="w-24">#</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Difficulty</TableHead>
+                        <TableHead>Confidence</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Time Taken</TableHead>
                         <TableHead>Submissions</TableHead>
@@ -66,7 +68,7 @@ const ListProblemSubmissionsPage = () => {
                 <TableBody>
                     {problems.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                                 No submissions yet.
                             </TableCell>
                         </TableRow>
@@ -77,6 +79,9 @@ const ListProblemSubmissionsPage = () => {
                                 <TableCell className="font-medium">{submission.problem.title}</TableCell>
                                 <TableCell>
                                     <ProblemDifficultyTag difficulty={submission.problem.difficulty} />
+                                </TableCell>
+                                <TableCell>
+                                    <ConfidenceLevelTag confidenceLevel={submission.confidenceLevel} />
                                 </TableCell>
                                 <TableCell className="text-sm text-muted-foreground">
                                     {formatDate(submission.submittedAt)}
