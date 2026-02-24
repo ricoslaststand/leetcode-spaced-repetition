@@ -6,20 +6,20 @@ const instance = axios.create({
     timeout: 5_000
 })
 
-export const getAllQuestionTags = async () => {
-    const response = await instance.get("/questions/tags")
+export const getAllProblemTopics = async () => {
+    const response = await instance.get("/problems/topics")
     return response.data
 }
 
-export const getQuestionByID = async (questionID: string) => {
-    const response = await instance.get(`/questions/${questionID}`)
+export const getProblemByID = async (problemID: string) => {
+    const response = await instance.get(`/problems/${problemID}`)
     return response.data
 }
 
-export const getAllQuestions = async (tags: string[]) => {
-    const response = await instance.get("/questions", {
+export const getAllProblems = async (topics: string[]) => {
+    const response = await instance.get("/problems", {
         params: {
-            "tags": tags
+            "topics": topics
         },
         paramsSerializer: params => {
             return qs.stringify(params, {
@@ -31,17 +31,17 @@ export const getAllQuestions = async (tags: string[]) => {
     return response.data
 }
 
-export const getQuestionSubmissions = async (id: number) => {
-    const response = await instance.get(`/questions/${id}/submissions`)
+export const getProblemSubmissions = async (id: number) => {
+    const response = await instance.get(`/problems/${id}/submissions`)
 
     return response.data
 }
 
-export const getQuestionSubmissionsV2 = async (questionIds: number[]) => {
-    const response = await instance.get('/questions/submissions',
+export const getProblemSubmissionsV2 = async (problemIds: number[]) => {
+    const response = await instance.get('/problems/submissions',
         {
             params: {
-                questionId: questionIds
+                problemId: problemIds
             },
             paramsSerializer: params => {
                 return qs.stringify(params, {
@@ -54,13 +54,13 @@ export const getQuestionSubmissionsV2 = async (questionIds: number[]) => {
     return response.data
 }
 
-export const createQuestionSubmission
-    = async (questionID: number, confidenceLevel: string, timeTaken?: number) => {
-    const response = await instance.post(`/questions/submissions`, {
-        questionID,
+export const createProblemSubmission
+    = async (problemID: number, confidenceLevel: string, timeTaken?: number) => {
+    const response = await instance.post(`/problems/submissions`, {
+        problemId: problemID,
         confidenceLevel,
         timeTaken
     })
-    
+
     return response.data
 }

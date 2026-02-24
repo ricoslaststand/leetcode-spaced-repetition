@@ -43,8 +43,8 @@ func main() {
 		logger.Error("failed to ping database", zap.Error(err))
 	}
 
-	questionsRepo := repositories.NewQuestionPostgresRepository(db, logger)
-	questionsService := services.NewQuestionsService(questionsRepo, logger)
+	problemsRepo := repositories.NewProblemPostgresRepository(db, logger)
+	problemsService := services.NewProblemsService(problemsRepo, logger)
 
 	router := gin.Default()
 	router.Use(cors.Default()) // All origins allowed by default
@@ -62,7 +62,7 @@ func main() {
 	})
 	p.Use(router)
 
-	controllers.RegisterRoutes(router, questionsService, logger)
+	controllers.RegisterRoutes(router, problemsService, logger)
 
 	// TODO: Turn this into a configurable port
 	logger.Info("starting API server", zap.String("port", ":8000"))

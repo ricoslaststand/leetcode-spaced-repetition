@@ -4,6 +4,6 @@ package models
 // swag v1 does not support Go generics, so these aliases are needed
 // to generate correct Swagger schema definitions for paginated responses.
 
-type QuestionPage = Pagaination[Question]
-type QuestionSubmissionPage = Pagaination[QuestionSubmission]
-type QuestionSubmissionWithDetailsPage = Pagaination[QuestionSubmissionWithDetails]
+type ProblemPage = Pagaination[Problem]
+type ProblemSubmissionPage = Pagaination[ProblemSubmission]
+type ProblemSubmissionWithDetailsPage = Pagaination[ProblemSubmissionWithDetails]

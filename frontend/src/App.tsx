@@ -1,10 +1,10 @@
 import './App.css'
 
 import { createRootRoute, createRoute, createRouter, RouterProvider } from '@tanstack/react-router'
-import QuestionSubmissionPage from './pages/QuestionSubmissionPage'
-import QuestionsPage from './pages/QuestionsPage'
-import QuestionMetadataPage from './pages/QuestionMetadataPage'
-import ListQuestionSubmissionsPage from './pages/ListQuestionSubmissionsPage'
+import ProblemSubmissionPage from './pages/ProblemSubmissionPage'
+import ProblemsPage from './pages/ProblemsPage'
+import ProblemMetadataPage from './pages/ProblemMetadataPage'
+import ListProblemSubmissionsPage from './pages/ListProblemSubmissionsPage'
 import { Toaster } from 'sonner'
 import { AuthenticatedLayout } from './layouts/AuthenticatedLayout'
 
@@ -15,42 +15,42 @@ const indexRoute = createRoute({
   component: () => <AuthenticatedLayout />,
 })
 
-const questionSubmissionsRoute = createRoute({
+const problemSubmissionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'submissions',
-  component: () => <QuestionSubmissionPage />
+  component: () => <ProblemSubmissionPage />
 })
 
-const questionsRoute = createRoute({
+const problemsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: 'questions',
+  path: 'problems',
   component: () => <AuthenticatedLayout />
 })
 const submissionsRoute = createRoute({
-  getParentRoute: () => questionsRoute,
+  getParentRoute: () => problemsRoute,
   path: 'submissions',
-  component: () => <ListQuestionSubmissionsPage />
+  component: () => <ListProblemSubmissionsPage />
 })
 
-const questionsListRoute = createRoute({
-  getParentRoute: () => questionsRoute,
+const problemsListRoute = createRoute({
+  getParentRoute: () => problemsRoute,
   path: '/',
-  component: () => <QuestionsPage />,
+  component: () => <ProblemsPage />,
 })
 
-const questionMetadataRoute = createRoute({
-  getParentRoute: () => questionsRoute,
-  path: '$questionId',
-  component: () => <QuestionMetadataPage />
+const problemMetadataRoute = createRoute({
+  getParentRoute: () => problemsRoute,
+  path: '$problemId',
+  component: () => <ProblemMetadataPage />
 })
 
 const routeTree = rootRoute.addChildren([
   indexRoute.addChildren([
-    questionSubmissionsRoute,
+    problemSubmissionsRoute,
   ]),
-  questionsRoute.addChildren([
-    questionsListRoute,
-    questionMetadataRoute
+  problemsRoute.addChildren([
+    problemsListRoute,
+    problemMetadataRoute
   ]),
   submissionsRoute,
 ])

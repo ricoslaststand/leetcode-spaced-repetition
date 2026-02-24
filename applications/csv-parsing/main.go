@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mgechev/revive/config"
 	"go.uber.org/zap"
 )
 
@@ -28,22 +27,22 @@ const (
 const dateFormat string = "2006-01-02"
 
 type recordSubmission struct {
-	questionNumber  int
+	problemNumber   int
 	timeTaken       time.Duration
 	submissionDate  time.Time
 	confidenceLevel models.ConfidenceLevel
 }
 
 func main() {
-	config, err := config.GetConfig()
+	cfg, err := internal.GetConfig()
 	if err != nil {
 		panic("failed to load config")
 	}
 
-	logger := internal.NewLogger(config.AppEnv)
+	logger := internal.NewLogger(cfg.AppEnv)
 	defer logger.Sync() //nolint:errcheck
 
-	db, err := internal.GetDBConnFromConfig(config)
+	db, err := internal.GetDBConnFromConfig(cfg)
 	if err != nil {
 		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
@@ -51,8 +50,8 @@ func main() {
 
 	logger.Info("constructing domain layers")
 
-	questionsRepo := repositories.NewQuestionPostgresRepository(db, logger)
-	questionsService := services.NewQuestionsService(questionsRepo, logger)
+	problemsRepo := repositories.NewProblemPostgresRepository(db, logger)
+	problemsService := services.NewProblemsService(problemsRepo, logger)
 
 	file, err := os.Open("leetcode_submissions.csv")
 	if err != nil {
@@ -74,7 +73,7 @@ func main() {
 
 	for i := 1; i < len(records); i++ {
 		logger.Debug("processing record", zap.Int("index", i), zap.Strings("record", records[i]))
-		submission, err := validateQuestionSubmission(records[i])
+		submission, err := validateProblemSubmission(records[i])
 		if err != nil {
 			logger.Error("invalid submission record", zap.Int("index", i), zap.Error(err))
 			continue
@@ -82,25 +81,25 @@ func main() {
 
 		userID, _ := uuid.NewUUID()
 
-		if err = questionsService.SaveQuestionSubmission(c, submission.questionNumber, userID, submission.submissionDate, submission.timeTaken, submission.confidenceLevel); err != nil {
-			logger.Error("failed to save question submission", zap.Int("questionNumber", submission.questionNumber), zap.Error(err))
+		if err = problemsService.SaveProblemSubmission(c, submission.problemNumber, userID, submission.submissionDate, submission.timeTaken, submission.confidenceLevel); err != nil {
+			logger.Error("failed to save problem submission", zap.Int("problemNumber", submission.problemNumber), zap.Error(err))
 		} else {
-			logger.Info("saved question submission", zap.Int("questionNumber", submission.questionNumber))
+			logger.Info("saved problem submission", zap.Int("problemNumber", submission.problemNumber))
 		}
 	}
 
 	logger.Info("CSV parsing completed successfully")
 }
 
-func validateQuestionSubmission(r []string) (recordSubmission, error) {
+func validateProblemSubmission(r []string) (recordSubmission, error) {
 	problemNum := r[ProblemNumberIdx]
 	date := r[DateIdx]
 	timeTaken := r[TimeTakenIdx]
 	confidenceLevelStr := r[ConfidenceLevelIdx]
 
-	questionNum, err := strconv.ParseInt(problemNum, 10, 0)
+	problemNumber, err := strconv.ParseInt(problemNum, 10, 0)
 	if err != nil {
-		return recordSubmission{}, fmt.Errorf("'%s' is not a valid question number", problemNum)
+		return recordSubmission{}, fmt.Errorf("'%s' is not a valid problem number", problemNum)
 	}
 
 	formattedTimeTakenDuration := strings.ReplaceAll(timeTaken, " ", "")
@@ -120,7 +119,7 @@ func validateQuestionSubmission(r []string) (recordSubmission, error) {
 	}
 
 	return recordSubmission{
-		questionNumber:  int(questionNum),
+		problemNumber:   int(problemNumber),
 		timeTaken:       timeTakenDuration,
 		submissionDate:  dateTime,
 		confidenceLevel: confidenceLevel,

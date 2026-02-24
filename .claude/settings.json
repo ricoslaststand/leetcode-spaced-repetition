@@ -12,6 +12,7 @@
       "Bash(docker compose:*)",
       "Bash(docker ps:*)",
       "Bash(docker exec:*)",
+      "Bash(make:*)",
       "Bash(go run:*)",
       "Bash(go test:*)",
       "Bash(git:*)",

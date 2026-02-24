@@ -6,13 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import parse from 'parse-duration'
 import { toast } from "sonner"
 
-import type { ConfidenceLevel as ConfidenceLevelType } from '../models/Question';
-import { ConfidenceLevel, confidenceLevelToString } from '../models/Question';
+import type { ConfidenceLevel as ConfidenceLevelType } from '../models/Problem';
+import { ConfidenceLevel, confidenceLevelToString } from '../models/Problem';
 import { Input } from '../components/ui/input';
 import { Slider } from '../components/ui/slider';
 import { Field, FieldGroup, FieldLabel } from '../components/ui/field';
 import { Button } from '../components/ui/button';
-import { createQuestionSubmission } from '../api';
+import { createProblemSubmission } from '../api';
 
 const ConfidenceLevelMemes: { level: ConfidenceLevelType; text: string }[] = [
     {
@@ -36,23 +36,23 @@ const ConfidenceLevelMemes: { level: ConfidenceLevelType; text: string }[] = [
 const confidenceLevelLabels = ["Again", "Hard", "Good", "Easy"]
 
 const formSchema = z.object({
-    questionId: z.string(),
+    problemId: z.string(),
     confidenceLevel: z.number().min(ConfidenceLevel.Again).max(ConfidenceLevel.Easy),
     timeTaken: z.number().min(0)
 })
 
-const QuestionSubmissionPage: React.FC = () => {
+const ProblemSubmissionPage: React.FC = () => {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            questionId: "",
+            problemId: "",
             confidenceLevel: ConfidenceLevel.Good,
         }
     })
 
     const onSubmit = async (data: z.infer<typeof formSchema>) => {
-        await createQuestionSubmission(
-            parseInt(data.questionId),
+        await createProblemSubmission(
+            parseInt(data.problemId),
             confidenceLevelToString(data.confidenceLevel as ConfidenceLevelType),
             data.timeTaken
         )
@@ -67,11 +67,11 @@ const QuestionSubmissionPage: React.FC = () => {
             </h1>
             <form onSubmit={form.handleSubmit(onSubmit)}>
                 <Controller
-                    name="questionId"
+                    name="problemId"
                     control={form.control}
                     render={({ field, fieldState }) => (
                         <Field data-invalid={fieldState.invalid}>
-                            <FieldLabel htmlFor={field.name}>Question #</FieldLabel>
+                            <FieldLabel htmlFor={field.name}>Problem #</FieldLabel>
                             <Input
                                 {...field}
                                 placeholder="e.g. 42"
@@ -140,4 +140,4 @@ const QuestionSubmissionPage: React.FC = () => {
     )
 }
 
-export default QuestionSubmissionPage;
+export default ProblemSubmissionPage;

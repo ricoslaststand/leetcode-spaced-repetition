@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 
-type QuestionSubmissionsTableProps = {
+type ProblemSubmissionsTableProps = {
     submissions: any[]
 };
 
@@ -38,7 +38,7 @@ const formatDate = (dateStr: string): string => {
     return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 }
 
-export default function QuestionSubmissionsTable({ submissions }: QuestionSubmissionsTableProps) {
+export default function ProblemSubmissionsTable({ submissions }: ProblemSubmissionsTableProps) {
     return (
         <Table>
             <TableHeader>

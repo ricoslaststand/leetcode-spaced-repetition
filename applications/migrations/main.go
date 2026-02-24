@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"flag"
 	"leetcode-spaced-repetition/internal"
 
 	goose "github.com/pressly/goose/v3"
@@ -11,6 +12,9 @@ import (
 var embedMigrations embed.FS
 
 func main() {
+	direction := flag.String("direction", "up", "Migration direction: up or down")
+	flag.Parse()
+
 	goose.SetBaseFS(embedMigrations)
 	config, err := internal.GetConfig()
 	if err != nil {
@@ -26,23 +30,16 @@ func main() {
 		panic(err)
 	}
 
-	if err := goose.Up(db, "."); err != nil {
-		panic(err)
+	switch *direction {
+	case "up":
+		if err := goose.Up(db, "."); err != nil {
+			panic(err)
+		}
+	case "down":
+		if err := goose.Down(db, "."); err != nil {
+			panic(err)
+		}
+	default:
+		panic("invalid direction: " + *direction + " (must be 'up' or 'down')")
 	}
 }
-
-// RunMigrations uses Goose's provider API to apply migrations.
-// func RunMigrations(ctx context.Context, db *sql.DB, migrationsDir string) error {
-// 	// Create a Goose provider for Postgres
-// 	provider, err := goose.NewProvider("postgres", db, goose.WithNoVersioning(false))
-// 	if err != nil {
-// 		return fmt.Errorf("failed to create goose provider: %w", err)
-// 	}
-
-// 	// Apply all migrations up to the latest
-// 	if err := provider.Up(ctx, migrationsDir); err != nil {
-// 		return fmt.Errorf("failed to apply migrations: %w", err)
-// 	}
-
-// 	return nil
-// }

@@ -1,5 +1,6 @@
 services:
   db:
+    container_name: leetcode-buddy-postgres
     image: postgres
     restart: always
     environment:
@@ -23,8 +24,14 @@ services:
   app:
     container_name: leetcode-buddy-app-frontend
     build:
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
       context: ./frontend/
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true 
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     ports:
       - 5173:5173
     networks:

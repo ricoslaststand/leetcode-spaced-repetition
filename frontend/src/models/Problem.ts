@@ -16,16 +16,16 @@ export function confidenceLevelToString(level: ConfidenceLevel): string {
     return confidenceLevelStrings[level]
 }
 
-export type QuestionSubmissionWithDetails = {
+export type ProblemSubmissionWithDetails = {
     id: number;
-    questionId: number;
+    problemId: number;
     confidenceLevel: string;
     timeTaken: number | null;
-    question: {
+    problem: {
         id: number;
         title: string;
         slug: string;
         difficulty: string;
-        tags: string[];
+        topics: string[];
     };
 }

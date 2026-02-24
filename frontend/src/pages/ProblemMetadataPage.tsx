@@ -3,23 +3,23 @@ import { type FC } from 'react'
 import { useParams } from '@tanstack/react-router'
 import { Spinner } from "../components/ui/spinner"
 
-import { useQuestionSubmissions } from "../hooks/api"
-import QuestionSubmissionsTable from '../components/QuestionSubmissionsTable'
+import { useProblemSubmissions } from "../hooks/api"
+import ProblemSubmissionsTable from '../components/ProblemSubmissionsTable'
 
-const QuestionMetadataPage: FC = () => {
-    const questionId = useParams({
-        from: '/questions/$questionId',
-        select: (params) => params.questionId
+const ProblemMetadataPage: FC = () => {
+    const problemId = useParams({
+        from: '/problems/$problemId',
+        select: (params) => params.problemId
     });
 
-    const { data, isLoading } = useQuestionSubmissions(questionId)
+    const { data, isLoading } = useProblemSubmissions(problemId)
 
     return (
         <div>
             <h1 className="text-2xl font-semibold tracking-tight mb-6">
                 Submission History
                 <span className="text-muted-foreground font-normal text-lg ml-2">
-                    #{questionId}
+                    #{problemId}
                 </span>
             </h1>
             {isLoading && (
@@ -27,9 +27,9 @@ const QuestionMetadataPage: FC = () => {
                     <Spinner />
                 </div>
             )}
-            {data && <QuestionSubmissionsTable submissions={data.data} />}
+            {data && <ProblemSubmissionsTable submissions={data.data} />}
         </div>
     )
 }
 
-export default QuestionMetadataPage
+export default ProblemMetadataPage

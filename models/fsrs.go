@@ -8,7 +8,7 @@ import (
 
 type CardState struct {
 	ID            uuid.UUID
-	QuestionID    int
+	ProblemID     int
 	UserID        uuid.UUID
 	Stability     float64
 	Difficulty    float64

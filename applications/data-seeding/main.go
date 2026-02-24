@@ -11,21 +11,20 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mgechev/revive/config"
 	"go.uber.org/zap"
 )
 
 type LeetcodeProblem struct {
 	Name       string
-	Difficulty models.QuestionDifficulty
+	Difficulty models.ProblemDifficulty
 	Slug       string
 	Acceptance float64
 	Frequency  float64
 	TimeTag    string
 }
 
-type questionsResponse struct {
-	Questions []struct {
+type problemsResponse struct {
+	Problems []struct {
 		Title       string   `json:"title"`
 		ProblemID   string   `json:"problem_id"`
 		FrontendID  string   `json:"frontend_id"`
@@ -72,12 +71,12 @@ func convertFileNameToTimeTag(filename string) (TimeTag, error) {
 	return LastThirtyDays, fmt.Errorf("'%s' is not a valid time tag", filename)
 }
 
-func convertStringToDifficulty(diffStr string) (models.QuestionDifficulty, error) {
+func convertStringToDifficulty(diffStr string) (models.ProblemDifficulty, error) {
 	switch strings.ToLower(strings.Trim(diffStr, " `")) {
 	case "easy":
 		return models.EasyDifficulty, nil
 	case "medium", "mild":
-		return models.MildDifficulty, nil
+		return models.MediumDifficulty, nil
 	case "hard":
 		return models.HardDifficulty, nil
 	default:
@@ -92,7 +91,7 @@ func getSlugFromLink(link string) string {
 }
 
 func main() {
-	config, err := config.GetConfig()
+	config, err := internal.GetConfig()
 	if err != nil {
 		panic("failed to load config")
 	}
@@ -106,7 +105,7 @@ func main() {
 	}
 	defer db.Close()
 
-	questionsRepo := repositories.NewQuestionPostgresRepository(db, logger)
+	problemsRepo := repositories.NewProblemPostgresRepository(db, logger)
 
 	entries, err := os.ReadDir("./")
 	if err != nil {
@@ -123,40 +122,42 @@ func main() {
 		return
 	}
 
-	var mergedQuestions questionsResponse
-	if err = json.Unmarshal(tagsFileContent, &mergedQuestions); err != nil {
-		logger.Error("failed to unmarshal questions JSON", zap.Error(err))
+	var mergedProblems problemsResponse
+	if err = json.Unmarshal(tagsFileContent, &mergedProblems); err != nil {
+		logger.Error("failed to unmarshal problems JSON", zap.Error(err))
 		return
 	}
 
-	for _, question := range mergedQuestions.Questions {
-		questionDifficulty, err := convertStringToDifficulty(question.Difficulty)
+	logger.Info("updating", zap.Int("num of problems", len(mergedProblems.Problems)))
+
+	for _, problem := range mergedProblems.Problems {
+		problemDifficulty, err := convertStringToDifficulty(strings.ToLower(problem.Difficulty))
 		if err != nil {
-			logger.Error("invalid difficulty", zap.String("difficulty", question.Difficulty), zap.Error(err))
+			logger.Error("invalid difficulty", zap.String("difficulty", problem.Difficulty), zap.Error(err))
 			return
 		}
 
-		intQuestionID, err := strconv.Atoi(question.ProblemID)
+		intProblemID, err := strconv.Atoi(problem.ProblemID)
 		if err != nil {
-			logger.Error("invalid problem ID", zap.String("problemID", question.ProblemID), zap.Error(err))
+			logger.Error("invalid problem ID", zap.String("problemID", problem.ProblemID), zap.Error(err))
 			return
 		}
 
-		if err = questionsRepo.SaveQuestion(context.Background(), &models.Question{
-			ID:          intQuestionID,
-			Title:       question.Title,
-			Description: question.Description,
-			Slug:        question.ProblemSlug,
-			Difficulty:  questionDifficulty,
-			Tags:        question.Topics,
+		if err = problemsRepo.SaveProblem(context.Background(), &models.Problem{
+			ID:          intProblemID,
+			Title:       problem.Title,
+			Description: problem.Description,
+			Slug:        problem.ProblemSlug,
+			Difficulty:  problemDifficulty,
+			Topics:      problem.Topics,
 		}); err != nil {
-			logger.Error("failed to save question", zap.Int("questionID", intQuestionID), zap.Error(err))
+			logger.Error("failed to save problem", zap.Int("problemID", intProblemID), zap.Error(err))
 			return
 		}
 
-		for _, tag := range question.Topics {
-			if err = questionsRepo.SaveQuestionTag(context.Background(), intQuestionID, tag); err != nil {
-				logger.Error("failed to save question tag", zap.Int("questionID", intQuestionID), zap.String("tag", tag), zap.Error(err))
+		for _, topic := range problem.Topics {
+			if err = problemsRepo.SaveProblemTopic(context.Background(), intProblemID, topic); err != nil {
+				logger.Error("failed to save problem topic", zap.Int("problemID", intProblemID), zap.String("topic", topic), zap.Error(err))
 				return
 			}
 		}

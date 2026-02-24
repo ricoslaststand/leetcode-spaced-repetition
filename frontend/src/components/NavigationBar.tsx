@@ -16,10 +16,10 @@ export function MainNav() {
         <NavigationMenuList>
           <NavigationMenuItem>
             <NavigationMenuLink
-              href="/questions"
+              href="/problems"
               className={navigationMenuTriggerStyle()}
             >
-              Questions
+              Problems
             </NavigationMenuLink>
           </NavigationMenuItem>
 
@@ -34,7 +34,7 @@ export function MainNav() {
 
           <NavigationMenuItem>
             <NavigationMenuLink
-              href="/questions/submissions"
+              href="/problems/submissions"
               className={navigationMenuTriggerStyle()}
             >
               All Submissions

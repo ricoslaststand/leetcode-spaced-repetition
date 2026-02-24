@@ -68,3 +68,13 @@ watch:
 
 lint-frontend:
 	@npx -y react-doctor@latest frontend
+
+migrate-db-up:
+	@echo "Running migrations (up)..."
+	@docker build -f Dockerfile.migrations -t leetcode-spaced-repetition-migrations .
+	@docker run --rm --env-file .env --network leetcode-spaced-repetition_app-network leetcode-spaced-repetition-migrations -direction up
+
+migrate-db-down:
+	@echo "Running migrations (down)..."
+	@docker build -f Dockerfile.migrations -t leetcode-spaced-repetition-migrations .
+	@docker run --rm --env-file .env --network leetcode-spaced-repetition_app-network leetcode-spaced-repetition-migrations -direction down

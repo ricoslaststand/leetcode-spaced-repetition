@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react"
-import { getQuestionSubmissions, getAllQuestionTags } from "../api"
+import { getProblemSubmissions, getAllProblemTopics } from "../api"
 
-export function useQuestionSubmissions(questionId?: number) {
+export function useProblemSubmissions(problemId?: number) {
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    if (!questionId) return
+    if (!problemId) return
 
     const fetchData = async () => {
       setIsLoading(true)
       setError(null)
 
       try {
-        const result = await getQuestionSubmissions(questionId)
+        const result = await getProblemSubmissions(problemId)
         setData(result)
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Unknown error"))
@@ -24,12 +24,12 @@ export function useQuestionSubmissions(questionId?: number) {
     }
 
     fetchData()
-  }, [questionId])
+  }, [problemId])
 
   return { data, error, isLoading }
 }
 
-export function useQuestionTags() {
+export function useProblemTopics() {
   const [data, setData] = useState(null)
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -40,7 +40,7 @@ export function useQuestionTags() {
       setError(null)
 
       try {
-        const result = await getAllQuestionTags()
+        const result = await getAllProblemTopics()
         setData(result)
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Unknown error"))

@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getQuestionSubmissionsV2 } from "../api";
+import { getProblemSubmissionsV2 } from "../api";
 import { generateLeetcodeURL } from "../lib/leetcodeUtils";
 
 const difficultyColor = (d: string) =>
@@ -17,13 +17,13 @@ const difficultyColor = (d: string) =>
   d === "Medium" ? "text-amber-500 font-medium" :
   "text-red-500 font-medium"
 
-const ListQuestionSubmissionsPage = () => {
-    const [questions, setQuestions] = useState<any[]>([])
+const ListProblemSubmissionsPage = () => {
+    const [problems, setProblems] = useState<any[]>([])
 
     useEffect(() => {
         (async () => {
-            const data = await getQuestionSubmissionsV2([])
-            setQuestions(data?.data || []);
+            const data = await getProblemSubmissionsV2([])
+            setProblems(data?.data || []);
         })()
     }, [])
 
@@ -41,23 +41,23 @@ const ListQuestionSubmissionsPage = () => {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {questions.length === 0 ? (
+                    {problems.length === 0 ? (
                         <TableRow>
                             <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                                 No submissions yet.
                             </TableCell>
                         </TableRow>
                     ) : (
-                        questions.map(submission => (
-                            <TableRow key={submission.question.id}>
-                                <TableCell className="text-muted-foreground">{submission.question.id}</TableCell>
-                                <TableCell className="font-medium">{submission.question.title}</TableCell>
-                                <TableCell className={difficultyColor(submission.question.difficulty)}>
-                                    {submission.question.difficulty}
+                        problems.map(submission => (
+                            <TableRow key={submission.problem.id}>
+                                <TableCell className="text-muted-foreground">{submission.problem.id}</TableCell>
+                                <TableCell className="font-medium">{submission.problem.title}</TableCell>
+                                <TableCell className={difficultyColor(submission.problem.difficulty)}>
+                                    {submission.problem.difficulty}
                                 </TableCell>
                                 <TableCell>
                                     <Link
-                                        to={`/questions/${submission.question.id}`}
+                                        to={`/problems/${submission.problem.id}`}
                                         className="text-sm text-primary underline-offset-4 hover:underline"
                                     >
                                         View
@@ -65,7 +65,7 @@ const ListQuestionSubmissionsPage = () => {
                                 </TableCell>
                                 <TableCell>
                                     <a
-                                        href={generateLeetcodeURL(submission.question.id)}
+                                        href={generateLeetcodeURL(submission.problem.id)}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="text-sm text-primary underline-offset-4 hover:underline"
@@ -82,4 +82,4 @@ const ListQuestionSubmissionsPage = () => {
     );
 }
 
-export default ListQuestionSubmissionsPage;
+export default ListProblemSubmissionsPage;

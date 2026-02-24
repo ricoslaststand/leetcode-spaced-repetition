@@ -9,12 +9,12 @@ import (
 	fsrs "github.com/open-spaced-repetition/go-fsrs"
 )
 
-type QuestionDifficulty string
+type ProblemDifficulty string
 
 const (
-	EasyDifficulty QuestionDifficulty = "easy"
-	MildDifficulty QuestionDifficulty = "mild"
-	HardDifficulty QuestionDifficulty = "hard"
+	EasyDifficulty   ProblemDifficulty = "easy"
+	MediumDifficulty ProblemDifficulty = "medium"
+	HardDifficulty   ProblemDifficulty = "hard"
 )
 
 type ConfidenceLevel string
@@ -27,57 +27,56 @@ const (
 )
 
 type (
-	Question struct {
-		ID          int                `json:"id"`
-		Tags        []string           `json:"tags"`
-		Title       string             `json:"title"`
-		Slug        string             `json:"slug"`
-		Description string             `json:"description"`
-		Difficulty  QuestionDifficulty `json:"difficulty"`
+	Problem struct {
+		ID          int               `json:"id"`
+		Topics      []string          `json:"topics"`
+		Title       string            `json:"title"`
+		Slug        string            `json:"slug"`
+		Description string            `json:"description"`
+		Difficulty  ProblemDifficulty `json:"difficulty"`
 	}
 
-	QuestionTag struct {
-		ID         int    `json:"id"`
-		QuestionID int    `json:"questionId"`
-		Tag        string `json:"tag"`
+	ProblemTopic struct {
+		ID        int    `json:"id"`
+		ProblemID int    `json:"problemId"`
+		Topic     string `json:"topic"`
 	}
 
-	QuestionSubmission struct {
+	ProblemSubmission struct {
 		ID              uuid.UUID       `json:"id"`
-		QuestionID      int             `json:"questionId"`
+		ProblemID       int             `json:"problemId"`
 		Date            time.Time       `json:"date"`
 		TimeTaken       uint            `json:"timeTaken"`
 		ConfidenceLevel ConfidenceLevel `json:"confidenceLevel"`
 	}
 
-	QuestionSubmissionWithDetails struct {
+	ProblemSubmissionWithDetails struct {
 		ID              uuid.UUID       `json:"id"`
 		SubmittedAt     time.Time       `json:"submittedAt"`
 		TimeTaken       uint            `json:"timeTaken"`
 		ConfidenceLevel ConfidenceLevel `json:"confidenceLevel"`
-		Question        struct {
-			ID          int                `json:"id"`
-			Title       string             `json:"title"`
-			Description string             `json:"description"`
-			Difficulty  QuestionDifficulty `json:"difficulty"`
-		} `json:"question"`
+		Problem         struct {
+			ID          int               `json:"id"`
+			Title       string            `json:"title"`
+			Description string            `json:"description"`
+			Difficulty  ProblemDifficulty `json:"difficulty"`
+		} `json:"problem"`
 	}
 
-	QuestionSubmissionUserStats struct {
+	ProblemSubmissionUserStats struct {
 		ID               uuid.UUID     `json:"id"`
-		QuestionID       int           `json:"questionID"`
+		ProblemID        int           `json:"problemID"`
 		UserID           uuid.UUID     `json:"userID"`
 		NumOfSubmissions uint          `json:"numOfSubmissions"`
 		AvgDuration      time.Duration `json:"avgDuration"`
 		NextReviewDate   time.Time     `json:"nextReviewDate"`
 	}
 
-	QuestionCard struct {
-		QuestionID uuid.UUID `json:"questionID"`
-		Card       fsrs.Card `json:"card"`
+	ProblemCard struct {
+		ProblemID uuid.UUID `json:"problemID"`
+		Card      fsrs.Card `json:"card"`
 	}
 )
-
 
 func DetermineConfidenceLevelFromString(valStr string) (ConfidenceLevel, error) {
 	switch strings.ToLower(strings.TrimSpace(valStr)) {

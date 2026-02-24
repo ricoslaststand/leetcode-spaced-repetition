@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"leetcode-spaced-repetition/internal"
-	config "leetcode-spaced-repetition/internal"
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/repositories"
 	"os"
@@ -53,23 +52,23 @@ type ProblemData struct {
 	StatStatusPairs []StatStatusPair `json:"stat_status_pairs"`
 }
 
-type Questions struct {
-	Questions []struct {
-		ID   string   `json:"problem_id"`
-		Tags []string `json:"topics"`
+type MergedProblems struct {
+	Problems []struct {
+		ID     string   `json:"problem_id"`
+		Topics []string `json:"topics"`
 	} `json:"questions"`
 }
 
 func main() {
-	logger := internal.NewLogger()
-	defer logger.Sync() //nolint:errcheck
-
-	config, err := config.GetConfig()
+	cfg, err := internal.GetConfig()
 	if err != nil {
-		logger.Fatal("failed to load config", zap.Error(err))
+		panic("failed to load config")
 	}
 
-	db, err := internal.GetDBConnFromConfig(config)
+	logger := internal.NewLogger(cfg.AppEnv)
+	defer logger.Sync() //nolint:errcheck
+
+	db, err := internal.GetDBConnFromConfig(cfg)
 	if err != nil {
 		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
@@ -88,67 +87,67 @@ func main() {
 		logger.Fatal("failed to unmarshal problems JSON", zap.Error(err))
 	}
 
-	numOfQuestions := len(responseData.StatStatusPairs)
-	logger.Info("downloaded problems", zap.Int("count", numOfQuestions))
+	numOfProblems := len(responseData.StatStatusPairs)
+	logger.Info("downloaded problems", zap.Int("count", numOfProblems))
 
-	questionRepo := repositories.NewQuestionPostgresRepository(db, logger)
+	problemRepo := repositories.NewProblemPostgresRepository(db, logger)
 
-	var questions []models.Question
-	for i := 0; i < numOfQuestions; i++ {
-		currQuestion := responseData.StatStatusPairs[i]
-		difficultyMap := map[int]models.QuestionDifficulty{
+	var problems []models.Problem
+	for i := 0; i < numOfProblems; i++ {
+		currProblem := responseData.StatStatusPairs[i]
+		difficultyMap := map[int]models.ProblemDifficulty{
 			1: models.EasyDifficulty,
-			2: models.MildDifficulty,
+			2: models.MediumDifficulty,
 			3: models.HardDifficulty,
 		}
-		questionDifficulty, ok := difficultyMap[currQuestion.Difficulty.Level]
+		problemDifficulty, ok := difficultyMap[currProblem.Difficulty.Level]
 		if !ok {
-			logger.Error("unrecognized difficulty level", zap.Int("level", currQuestion.Difficulty.Level))
+			logger.Error("unrecognized difficulty level", zap.Int("level", currProblem.Difficulty.Level))
 			return
 		}
 
-		questions = append(questions, models.Question{
-			ID:          currQuestion.Stat.QuestionID,
-			Title:       currQuestion.Stat.QuestionTitle,
+		problems = append(problems, models.Problem{
+			ID:          currProblem.Stat.QuestionID,
+			Title:       currProblem.Stat.QuestionTitle,
 			Description: "",
-			Slug:        currQuestion.Stat.QuestionTitleSlug,
-			Difficulty:  questionDifficulty,
+			Slug:        currProblem.Stat.QuestionTitleSlug,
+			Difficulty:  problemDifficulty,
 		})
 	}
 
-	logger.Info("saving questions to the database", zap.Int("count", len(questions)))
+	logger.Info("saving problems to the database", zap.Int("count", len(problems)))
 
 	c := context.Background()
 
-	for i := 0; i < len(questions); i++ {
-		if err = questionRepo.SaveQuestion(c, &questions[i]); err != nil {
-			logger.Fatal("failed to save question", zap.Int("questionID", questions[i].ID), zap.Error(err))
+	for i := 0; i < len(problems); i++ {
+		if err = problemRepo.SaveProblem(c, &problems[i]); err != nil {
+			logger.Fatal("failed to save problem", zap.Int("problemID", problems[i].ID), zap.Error(err))
 		}
 	}
 
-	// Adding question tags
+	// Adding problem topics
 	tagsFileContent, err := os.ReadFile("merged_problems.json")
 	if err != nil {
 		logger.Fatal("failed to read merged_problems.json", zap.Error(err))
 	}
 
-	var mergedQuestions Questions
-	if err = json.Unmarshal(tagsFileContent, &mergedQuestions); err != nil {
-		logger.Fatal("failed to unmarshal tags JSON", zap.Error(err))
+	var mergedProblems MergedProblems
+	if err = json.Unmarshal(tagsFileContent, &mergedProblems); err != nil {
+		logger.Fatal("failed to unmarshal topics JSON", zap.Error(err))
 	}
 
-	for i := 0; i < len(mergedQuestions.Questions); i++ {
-		question := mergedQuestions.Questions[i]
-		questionId, err := strconv.Atoi(question.ID)
+	for i := 0; i < len(mergedProblems.Problems); i++ {
+		problem := mergedProblems.Problems[i]
+		problemId, err := strconv.Atoi(problem.ID)
 		if err != nil {
-			logger.Error("invalid question ID", zap.String("id", question.ID), zap.Error(err))
+			logger.Error("invalid problem ID", zap.String("id", problem.ID), zap.Error(err))
 			continue
 		}
 
-		for j := 0; j < len(question.Tags); j++ {
-			logger.Debug("processing tag", zap.Int("questionID", questionId), zap.String("tag", question.Tags[j]))
-			if err = questionRepo.SaveQuestionTag(c, questionId, question.Tags[j]); err != nil {
-				logger.Fatal("failed to save question tag", zap.Int("questionID", questionId), zap.String("tag", question.Tags[j]), zap.Error(err))
+		for j := 0; j < len(problem.Topics); j++ {
+			logger.Debug("processing topic", zap.Int("problemID", problemId), zap.String("topic", problem.Topics[j]))
+			if err = problemRepo.SaveProblemTopic(c, problemId, problem.Topics[j]); err != nil {
+				logger.Fatal("failed to save problem topic", zap.Int("problemID", problemId), zap.String("topic", problem.Topics[j]), zap.Error(err))
 			}
 		}
 	}
