@@ -20,17 +20,11 @@ type Config struct {
 }
 
 func GetConfig() (Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// .env is optional — in Docker, env vars are injected via --env-file
+	_ = godotenv.Load()
 
 	var config Config
-	err = envconfig.Process("", &config)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
+	err := envconfig.Process("", &config)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
