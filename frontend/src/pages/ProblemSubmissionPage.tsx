@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import React, { useRef, useState } from 'react';
 
 import { z } from 'zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -13,17 +12,7 @@ import { Slider } from '../components/ui/slider';
 import { Field, FieldGroup, FieldLabel } from '../components/ui/field';
 import { Button } from '../components/ui/button';
 import DurationInput from '../components/DurationInput';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { createProblemSubmission, getProblemSubmissionsV2, importSubmissions } from '../api';
-import ProblemDifficultyTag from '../components/ProblemDifficultyTag';
-import { generateLeetcodeURL } from '../lib/leetcodeUtils';
+import { createProblemSubmission, importSubmissions } from '../api';
 
 const ConfidenceLevelMemes: { level: ConfidenceLevelType; text: string }[] = [
     {
@@ -46,24 +35,6 @@ const ConfidenceLevelMemes: { level: ConfidenceLevelType; text: string }[] = [
 
 const confidenceLevelLabels = ["Again", "Hard", "Good", "Easy"]
 
-const formatDate = (dateStr: string): string => {
-    if (!dateStr) return "—"
-    const datePart = dateStr.split("T")[0]
-    const [year, month, day] = datePart.split("-").map(Number)
-    if (isNaN(year) || isNaN(month) || isNaN(day)) return datePart
-    const d = new Date(Date.UTC(year, month - 1, day))
-    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })
-}
-
-const formatTimeTaken = (seconds: number): string => {
-    if (!seconds) return "—"
-    const m = Math.floor(seconds / 60)
-    const s = seconds % 60
-    if (m === 0) return `${s}s`
-    if (s === 0) return `${m}m`
-    return `${m}m ${s}s`
-}
-
 
 const formSchema = z.object({
     problemId: z.string(),
@@ -74,14 +45,7 @@ const formSchema = z.object({
 const ProblemSubmissionPage: React.FC = () => {
     const [importFile, setImportFile] = useState<File | null>(null)
     const [isImporting, setIsImporting] = useState(false)
-    const [problems, setProblems] = useState<any[]>([])
-
-    const fetchSubmissions = async () => {
-        const data = await getProblemSubmissionsV2([])
-        setProblems(data?.data || [])
-    }
-
-    useEffect(() => { fetchSubmissions() }, [])
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -104,7 +68,7 @@ const ProblemSubmissionPage: React.FC = () => {
                 )
             }
             setImportFile(null)
-            await fetchSubmissions()
+            if (fileInputRef.current) fileInputRef.current.value = ''
         } catch {
             toast.error("Failed to import file. Please check the file format and try again.")
         } finally {
@@ -121,7 +85,6 @@ const ProblemSubmissionPage: React.FC = () => {
         )
         toast.success("Submission logged!")
         form.reset()
-        await fetchSubmissions()
     }
 
     return (
@@ -205,6 +168,7 @@ const ProblemSubmissionPage: React.FC = () => {
                     </p>
                     <div className="flex items-center gap-3">
                         <Input
+                            ref={fileInputRef}
                             type="file"
                             accept=".xlsx"
                             onChange={e => setImportFile(e.target.files?.[0] ?? null)}
@@ -220,65 +184,6 @@ const ProblemSubmissionPage: React.FC = () => {
                 </div>
             </div>
 
-            <div className="mt-12">
-                <h2 className="text-2xl font-semibold tracking-tight mb-6">All Submissions</h2>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-24">#</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Difficulty</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Duration</TableHead>
-                            <TableHead>Submissions</TableHead>
-                            <TableHead>LeetCode</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {problems.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                                    No submissions yet.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            problems.map(submission => (
-                                <TableRow key={submission.problem.id}>
-                                    <TableCell className="text-muted-foreground">{submission.problem.id}</TableCell>
-                                    <TableCell className="font-medium">{submission.problem.title}</TableCell>
-                                    <TableCell>
-                                        <ProblemDifficultyTag difficulty={submission.problem.difficulty} />
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                        {formatDate(submission.submittedAt)}
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                        {formatTimeTaken(submission.timeTaken)}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Link
-                                            to={`/problems/${submission.problem.id}`}
-                                            className="text-sm text-primary underline-offset-4 hover:underline"
-                                        >
-                                            View
-                                        </Link>
-                                    </TableCell>
-                                    <TableCell>
-                                        <a
-                                            href={generateLeetcodeURL(submission.problem.id)}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="text-sm text-primary underline-offset-4 hover:underline"
-                                        >
-                                            Open
-                                        </a>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
         </div>
     )
 }
