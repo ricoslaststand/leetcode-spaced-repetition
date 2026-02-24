@@ -38,3 +38,7 @@ tmp
 
 # TypeScript output
 dist
+
+# Excel files regarding leetcode problems and submissions
+*.xlsx
+
