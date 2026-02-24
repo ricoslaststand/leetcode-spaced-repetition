@@ -10,12 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { getProblemSubmissionsV2 } from "../api";
+import ProblemDifficultyTag from "../components/ProblemDifficultyTag";
 import { generateLeetcodeURL } from "../lib/leetcodeUtils";
 
-const difficultyColor = (d: string) =>
-  d === "Easy" ? "text-emerald-600 font-medium" :
-  d === "Medium" ? "text-amber-500 font-medium" :
-  "text-red-500 font-medium"
 
 const ListProblemSubmissionsPage = () => {
     const [problems, setProblems] = useState<any[]>([])
@@ -52,8 +49,8 @@ const ListProblemSubmissionsPage = () => {
                             <TableRow key={submission.problem.id}>
                                 <TableCell className="text-muted-foreground">{submission.problem.id}</TableCell>
                                 <TableCell className="font-medium">{submission.problem.title}</TableCell>
-                                <TableCell className={difficultyColor(submission.problem.difficulty)}>
-                                    {submission.problem.difficulty}
+                                <TableCell>
+                                    <ProblemDifficultyTag difficulty={submission.problem.difficulty} />
                                 </TableCell>
                                 <TableCell>
                                     <Link

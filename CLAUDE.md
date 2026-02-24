@@ -15,6 +15,7 @@
     - `src`
         - `pages`: each component maps to a unique URL
         - `components`: includes shared components across pages in addition to components for individual pages
+            - `ProblemDifficultyTag`: the canonical component for rendering a problem's difficulty badge. Use this everywhere a difficulty label needs to be shown.
 - `applications`: holds the different applications for the Go code. For example, it holds the API, one-off scripts for backfilling data, a worker.
 - `controllers`: the different HTTP API handlers 
 - `respositories`: holds both the interfaces and datastore implementations when interacting with the database

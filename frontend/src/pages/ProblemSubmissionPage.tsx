@@ -22,6 +22,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { createProblemSubmission, getProblemSubmissionsV2, importSubmissions } from '../api';
+import ProblemDifficultyTag from '../components/ProblemDifficultyTag';
 import { generateLeetcodeURL } from '../lib/leetcodeUtils';
 
 const ConfidenceLevelMemes: { level: ConfidenceLevelType; text: string }[] = [
@@ -63,10 +64,6 @@ const formatTimeTaken = (seconds: number): string => {
     return `${m}m ${s}s`
 }
 
-const difficultyColor = (d: string) =>
-    d === "Easy" ? "text-emerald-600 font-medium" :
-    d === "Medium" ? "text-amber-500 font-medium" :
-    "text-red-500 font-medium"
 
 const formSchema = z.object({
     problemId: z.string(),
@@ -249,8 +246,8 @@ const ProblemSubmissionPage: React.FC = () => {
                                 <TableRow key={submission.problem.id}>
                                     <TableCell className="text-muted-foreground">{submission.problem.id}</TableCell>
                                     <TableCell className="font-medium">{submission.problem.title}</TableCell>
-                                    <TableCell className={difficultyColor(submission.problem.difficulty)}>
-                                        {submission.problem.difficulty}
+                                    <TableCell>
+                                        <ProblemDifficultyTag difficulty={submission.problem.difficulty} />
                                     </TableCell>
                                     <TableCell className="text-sm text-muted-foreground">
                                         {formatDate(submission.submittedAt)}
