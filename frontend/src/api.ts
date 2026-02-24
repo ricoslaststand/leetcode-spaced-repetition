@@ -64,3 +64,13 @@ export const createProblemSubmission
 
     return response.data
 }
+
+export const importSubmissions = async (file: File) => {
+    const formData = new FormData()
+    formData.append("file", file)
+    const response = await instance.post("/problems/submissions/import", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 30_000
+    })
+    return response.data as { imported: number; skipped: number; errors: { row: number; reason: string }[] }
+}

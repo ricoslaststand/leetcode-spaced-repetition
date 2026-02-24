@@ -2,11 +2,16 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/repositories"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/xuri/excelize/v2"
 	"go.uber.org/zap"
 )
 
@@ -80,12 +85,131 @@ func (s ProblemService) GetAllSubmissionsForProblem(c context.Context, problemID
 	return submissions, nil
 }
 
+func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (models.ImportSubmissionsResult, error) {
+	result := models.ImportSubmissionsResult{
+		Errors: make([]models.ImportSubmissionRowError, 0),
+	}
+
+	f, err := excelize.OpenReader(r)
+	if err != nil {
+		return result, fmt.Errorf("failed to parse excel file: %w", err)
+	}
+	defer f.Close()
+
+	sheetName := f.GetSheetName(0)
+	rows, err := f.GetRows(sheetName)
+	if err != nil {
+		return result, fmt.Errorf("failed to read sheet: %w", err)
+	}
+
+	for i, row := range rows {
+		if i == 0 {
+			continue // skip header row
+		}
+		rowNumber := i + 1 // 1-based for error messages
+
+		// Skip blank rows
+		if len(row) == 0 || strings.TrimSpace(row[0]) == "" {
+			continue
+		}
+
+		if len(row) < 4 {
+			result.Errors = append(result.Errors, models.ImportSubmissionRowError{
+				Row:    rowNumber,
+				Reason: "row has fewer than 4 columns",
+			})
+			continue
+		}
+
+		// Column 0: "Problem #"
+		problemNumStr := strings.TrimSpace(row[0])
+		problemNumber, err := strconv.Atoi(problemNumStr)
+		if err != nil || problemNumber < 1 {
+			result.Errors = append(result.Errors, models.ImportSubmissionRowError{
+				Row:    rowNumber,
+				Reason: fmt.Sprintf("%q is not a valid problem number", problemNumStr),
+			})
+			continue
+		}
+
+		// Column 1: "Date" (YYYY-MM-DD)
+		dateStr := strings.TrimSpace(row[1])
+		submissionDate, err := time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			// Fallback: Excel may serialize dates as serial numbers (float strings)
+			if serialFloat, parseErr := strconv.ParseFloat(dateStr, 64); parseErr == nil {
+				if t, exErr := excelize.ExcelDateToTime(serialFloat, false); exErr == nil {
+					submissionDate = t
+				} else {
+					result.Errors = append(result.Errors, models.ImportSubmissionRowError{
+						Row:    rowNumber,
+						Reason: fmt.Sprintf("%q is not a valid date (expected YYYY-MM-DD)", dateStr),
+					})
+					continue
+				}
+			} else {
+				result.Errors = append(result.Errors, models.ImportSubmissionRowError{
+					Row:    rowNumber,
+					Reason: fmt.Sprintf("%q is not a valid date (expected YYYY-MM-DD)", dateStr),
+				})
+				continue
+			}
+		}
+		// Explicitly preserve year/month/day in UTC to prevent timezone drift
+		// when the driver encodes the time.Time value for the DATE column.
+		submissionDate = time.Date(submissionDate.Year(), submissionDate.Month(), submissionDate.Day(), 0, 0, 0, 0, time.UTC)
+
+		// Column 2: "Time Taken" (e.g. "1m50s", "1 m 36 s") — optional
+		var timeTaken *time.Duration
+		timeTakenStr := strings.ReplaceAll(strings.TrimSpace(row[2]), " ", "")
+		if timeTakenStr != "" {
+			d, err := time.ParseDuration(timeTakenStr)
+			if err != nil {
+				result.Errors = append(result.Errors, models.ImportSubmissionRowError{
+					Row:    rowNumber,
+					Reason: fmt.Sprintf("%q is not a valid time duration", timeTakenStr),
+				})
+				continue
+			}
+			timeTaken = &d
+		}
+
+		// Column 3: "Confidence" (1-4)
+		confidenceStr := strings.TrimSpace(row[3])
+		confidenceLevel, err := models.DetermineConfidenceLevelFromString(confidenceStr)
+		if err != nil {
+			result.Errors = append(result.Errors, models.ImportSubmissionRowError{
+				Row:    rowNumber,
+				Reason: fmt.Sprintf("%q is not a valid confidence level (expected 1-4)", confidenceStr),
+			})
+			continue
+		}
+
+		if err := s.problemRepo.SaveProblemSubmission(ctx, problemNumber, uuid.New(), submissionDate, timeTaken, confidenceLevel); err != nil {
+			s.logger.Error("failed to save imported submission",
+				zap.Int("row", rowNumber),
+				zap.Int("problemID", problemNumber),
+				zap.Error(err),
+			)
+			result.Errors = append(result.Errors, models.ImportSubmissionRowError{
+				Row:    rowNumber,
+				Reason: fmt.Sprintf("failed to save: %s", err.Error()),
+			})
+			continue
+		}
+
+		result.Imported++
+	}
+
+	return result, nil
+}
+
 func (s ProblemService) SaveProblemSubmission(
 	c context.Context,
 	problemID int,
 	userID uuid.UUID,
 	date time.Time,
-	timeTaken time.Duration,
+	timeTaken *time.Duration,
 	confidenceLevel models.ConfidenceLevel,
 ) error {
 	err := s.problemRepo.SaveProblemSubmission(c, problemID, userID, date, timeTaken, confidenceLevel)

@@ -46,14 +46,14 @@ type (
 		ID              uuid.UUID       `json:"id"`
 		ProblemID       int             `json:"problemId"`
 		Date            time.Time       `json:"date"`
-		TimeTaken       uint            `json:"timeTaken"`
+		TimeTaken       *uint           `json:"timeTaken"`
 		ConfidenceLevel ConfidenceLevel `json:"confidenceLevel"`
 	}
 
 	ProblemSubmissionWithDetails struct {
 		ID              uuid.UUID       `json:"id"`
 		SubmittedAt     time.Time       `json:"submittedAt"`
-		TimeTaken       uint            `json:"timeTaken"`
+		TimeTaken       *uint           `json:"timeTaken"`
 		ConfidenceLevel ConfidenceLevel `json:"confidenceLevel"`
 		Problem         struct {
 			ID          int               `json:"id"`
@@ -77,6 +77,17 @@ type (
 		Card      fsrs.Card `json:"card"`
 	}
 )
+
+type ImportSubmissionRowError struct {
+	Row    int    `json:"row"`
+	Reason string `json:"reason"`
+}
+
+type ImportSubmissionsResult struct {
+	Imported int                        `json:"imported"`
+	Skipped  int                        `json:"skipped"`
+	Errors   []ImportSubmissionRowError `json:"errors"`
+}
 
 func DetermineConfidenceLevelFromString(valStr string) (ConfidenceLevel, error) {
 	switch strings.ToLower(strings.TrimSpace(valStr)) {

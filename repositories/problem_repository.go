@@ -19,5 +19,5 @@ type ProblemRepository interface {
 	GetTopicsForProblem(c context.Context, ID int) ([]string, error)
 	SaveProblem(c context.Context, problem *models.Problem) error
 	SaveProblemTopic(c context.Context, problemId int, topic string) error
-	SaveProblemSubmission(c context.Context, problemID int, userID uuid.UUID, date time.Time, timeTaken time.Duration, confidenceLevel models.ConfidenceLevel) error
+	SaveProblemSubmission(c context.Context, problemID int, userID uuid.UUID, date time.Time, timeTaken *time.Duration, confidenceLevel models.ConfidenceLevel) error
 }

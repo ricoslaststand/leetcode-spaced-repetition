@@ -17,7 +17,9 @@
       "Bash(go test:*)",
       "Bash(git:*)",
       "Bash(tail:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(cd:*)",
+      "Bash(head:*)"
     ]
   }
 }

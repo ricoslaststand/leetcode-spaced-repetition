@@ -4,6 +4,11 @@ test:
 	@echo "Testing..."
 	@go test ./... -v
 
+# Run integration tests only (requires Docker)
+test-integration:
+	@echo "Running integration tests..."
+	@go test ./tests/integration/... -v -count=1
+
 lint:
 	@if command -v golangci-lint > /dev/null; then \
 		echo "Linting..."; \
@@ -78,3 +83,8 @@ migrate-db-down:
 	@echo "Running migrations (down)..."
 	@docker build -f Dockerfile.migrations -t leetcode-spaced-repetition-migrations .
 	@docker run --rm --env-file .env --network leetcode-spaced-repetition_app-network leetcode-spaced-repetition-migrations -direction down
+
+seed-db:
+	@echo "Seeding database with leetcode problems"
+	@docker build -t data-seeding -f Dockerfile.data-seeding .
+	@docker run --rm --name db-seeding --network leetcode-spaced-repetition_app-network data-seeding:latest

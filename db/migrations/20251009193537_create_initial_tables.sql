@@ -3,12 +3,13 @@
 CREATE TABLE IF NOT EXISTS problems (
     id INTEGER PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL UNIQUE,
+    slug VARCHAR(255) NOT NULL,
     description TEXT,
     difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE UNIQUE INDEX idx_problems_slug ON problems (slug);
 
 CREATE TABLE IF NOT EXISTS problem_topics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -16,9 +17,9 @@ CREATE TABLE IF NOT EXISTS problem_topics (
     topic VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (problem_id, topic),
     FOREIGN KEY (problem_id) REFERENCES problems(id)
 );
+CREATE UNIQUE INDEX idx_problem_topics_problem_id_topic ON problem_topics (problem_id, topic);
 
 CREATE TABLE IF NOT EXISTS problem_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,9 +30,9 @@ CREATE TABLE IF NOT EXISTS problem_submissions (
     time_taken INTERVAL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (user_id, problem_id, submission_date),
     FOREIGN KEY (problem_id) REFERENCES problems(id)
 );
+CREATE UNIQUE INDEX idx_problem_submissions_user_id_problem_id_submission_date ON problem_submissions (user_id, problem_id, submission_date);
 
 -- +goose StatementEnd
 

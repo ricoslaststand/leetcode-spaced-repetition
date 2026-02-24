@@ -26,7 +26,7 @@ type getProblemSubmissionsRequest struct {
 
 type saveProblemSubmissionRequest struct {
 	ProblemID       int    `json:"problemId" binding:"required,number" validate:"gte=1"`
-	TimeTaken       int    `json:"timeTaken" binding:"required,number" validate:"gte=0"`
+	TimeTaken       *int   `json:"timeTaken"`
 	ConfidenceLevel string `json:"confidenceLevel" binding:"required"`
 }
 
@@ -57,6 +57,7 @@ func RegisterRoutes(r *gin.Engine, problemsService *services.ProblemService, log
 	problemsGroup.GET("topics", problemsController.GetAllProblemTopics)
 	problemsGroup.GET("submissions", problemsController.getAllProblemSubmissions)
 	problemsGroup.POST("submissions", problemsController.SaveProblemSubmission)
+	problemsGroup.POST("submissions/import", problemsController.ImportSubmissions)
 	problemsGroup.GET(":id", problemsController.GetProblemByID)
 
 	individualProblemsGroup := problemsGroup.Group(":id")
@@ -231,12 +232,18 @@ func (c ProblemsController) SaveProblemSubmission(context *gin.Context) {
 		return
 	}
 
+	var timeTaken *time.Duration
+	if problemSubmissionRequest.TimeTaken != nil {
+		d := time.Duration(*problemSubmissionRequest.TimeTaken) * time.Second
+		timeTaken = &d
+	}
+
 	if err := c.problemsService.SaveProblemSubmission(
 		context,
 		problemSubmissionRequest.ProblemID,
-		uuid.New(),
+		uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
 		time.Now(),
-		time.Duration(problemSubmissionRequest.TimeTaken*int(time.Second)),
+		timeTaken,
 		models.ConfidenceLevel(problemSubmissionRequest.ConfidenceLevel),
 	); err != nil {
 		c.logger.Error("failed to save problem submission", zap.Int("problemID", problemSubmissionRequest.ProblemID), zap.Error(err))
@@ -249,6 +256,48 @@ func (c ProblemsController) SaveProblemSubmission(context *gin.Context) {
 	context.JSON(201, gin.H{
 		"message": "Successfully saved problem submission",
 	})
+}
+
+// ImportSubmissions godoc
+// @Summary      Import submissions from Excel
+// @Description  Accepts a multipart/form-data .xlsx file and bulk-imports problem submissions. Each row must have columns: "Problem #", "Date" (YYYY-MM-DD), "Confidence" (1-4), "Language" (python only).
+// @Tags         submissions
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file  formData  file  true  "Excel file (.xlsx)"
+// @Success      200   {object}  models.ImportSubmissionsResult
+// @Failure      400   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /problems/submissions/import [post]
+func (c ProblemsController) ImportSubmissions(ctx *gin.Context) {
+	fileHeader, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "A file field named \"file\" is required.",
+		})
+		return
+	}
+
+	f, err := fileHeader.Open()
+	if err != nil {
+		c.logger.Error("failed to open uploaded file", zap.Error(err))
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to read the uploaded file.",
+		})
+		return
+	}
+	defer f.Close()
+
+	result, err := c.problemsService.ImportSubmissions(ctx, f)
+	if err != nil {
+		c.logger.Error("failed to import submissions", zap.Error(err))
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, result)
 }
 
 // getAllProblemSubmissions godoc

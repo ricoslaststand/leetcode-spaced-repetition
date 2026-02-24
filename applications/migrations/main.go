@@ -1,21 +1,18 @@
 package main
 
 import (
-	"embed"
 	"flag"
+	"leetcode-spaced-repetition/db/migrations"
 	"leetcode-spaced-repetition/internal"
 
 	goose "github.com/pressly/goose/v3"
 )
 
-//go:embed *.sql
-var embedMigrations embed.FS
-
 func main() {
 	direction := flag.String("direction", "up", "Migration direction: up or down")
 	flag.Parse()
 
-	goose.SetBaseFS(embedMigrations)
+	goose.SetBaseFS(migrations.MigrationFiles)
 	config, err := internal.GetConfig()
 	if err != nil {
 		panic(err)

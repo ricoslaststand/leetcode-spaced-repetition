@@ -16,3 +16,7 @@ func GetDBConnFromConfig(config Config) (*sql.DB, error) {
 		config.PostgresDB.Username, config.PostgresDB.Password, config.PostgresDB.DB)
 	return sql.Open("postgres", connStr)
 }
+
+func GetDBConnFromDSN(dsn string) (*sql.DB, error) {
+	return sql.Open("postgres", dsn)
+}

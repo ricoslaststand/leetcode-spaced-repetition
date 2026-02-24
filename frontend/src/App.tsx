@@ -4,7 +4,6 @@ import { createRootRoute, createRoute, createRouter, RouterProvider } from '@tan
 import ProblemSubmissionPage from './pages/ProblemSubmissionPage'
 import ProblemsPage from './pages/ProblemsPage'
 import ProblemMetadataPage from './pages/ProblemMetadataPage'
-import ListProblemSubmissionsPage from './pages/ListProblemSubmissionsPage'
 import { Toaster } from 'sonner'
 import { AuthenticatedLayout } from './layouts/AuthenticatedLayout'
 
@@ -16,7 +15,7 @@ const indexRoute = createRoute({
 })
 
 const problemSubmissionsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => indexRoute,
   path: 'submissions',
   component: () => <ProblemSubmissionPage />
 })
@@ -26,12 +25,6 @@ const problemsRoute = createRoute({
   path: 'problems',
   component: () => <AuthenticatedLayout />
 })
-const submissionsRoute = createRoute({
-  getParentRoute: () => problemsRoute,
-  path: 'submissions',
-  component: () => <ListProblemSubmissionsPage />
-})
-
 const problemsListRoute = createRoute({
   getParentRoute: () => problemsRoute,
   path: '/',
@@ -52,7 +45,6 @@ const routeTree = rootRoute.addChildren([
     problemsListRoute,
     problemMetadataRoute
   ]),
-  submissionsRoute,
 ])
 const router = createRouter({ routeTree })
 

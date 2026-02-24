@@ -25,19 +25,10 @@ export function MainNav() {
 
           <NavigationMenuItem>
             <NavigationMenuLink
-              href="/"
+              href="/submissions"
               className={navigationMenuTriggerStyle()}
             >
-              Log Submission
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-
-          <NavigationMenuItem>
-            <NavigationMenuLink
-              href="/problems/submissions"
-              className={navigationMenuTriggerStyle()}
-            >
-              All Submissions
+              Submissions
             </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>

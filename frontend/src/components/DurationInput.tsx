@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
  * - Keyboard arrows adjust values (native for type=number; plus extra shortcuts)
  * - Prevent seconds > 59 (we normalize on change/blur)
  * - Backend-friendly: emits totalSeconds
- * - Power-user parsing: supports "1:30", "1m 30s", "90", "90s", "2m", "45sec"
  * - Renders a compact normalized value string
  *
  * Usage:

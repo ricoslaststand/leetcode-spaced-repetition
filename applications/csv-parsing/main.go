@@ -28,7 +28,7 @@ const dateFormat string = "2006-01-02"
 
 type recordSubmission struct {
 	problemNumber   int
-	timeTaken       time.Duration
+	timeTaken       *time.Duration
 	submissionDate  time.Time
 	confidenceLevel models.ConfidenceLevel
 }
@@ -79,7 +79,7 @@ func main() {
 			continue
 		}
 
-		userID, _ := uuid.NewUUID()
+		userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
 
 		if err = problemsService.SaveProblemSubmission(c, submission.problemNumber, userID, submission.submissionDate, submission.timeTaken, submission.confidenceLevel); err != nil {
 			logger.Error("failed to save problem submission", zap.Int("problemNumber", submission.problemNumber), zap.Error(err))
@@ -102,10 +102,14 @@ func validateProblemSubmission(r []string) (recordSubmission, error) {
 		return recordSubmission{}, fmt.Errorf("'%s' is not a valid problem number", problemNum)
 	}
 
-	formattedTimeTakenDuration := strings.ReplaceAll(timeTaken, " ", "")
-	timeTakenDuration, err := time.ParseDuration(formattedTimeTakenDuration)
-	if err != nil {
-		return recordSubmission{}, fmt.Errorf("'%s' is not a valid time duration", formattedTimeTakenDuration)
+	var timeTakenDuration *time.Duration
+	formattedTimeTakenStr := strings.ReplaceAll(strings.TrimSpace(timeTaken), " ", "")
+	if formattedTimeTakenStr != "" {
+		d, err := time.ParseDuration(formattedTimeTakenStr)
+		if err != nil {
+			return recordSubmission{}, fmt.Errorf("'%s' is not a valid time duration", formattedTimeTakenStr)
+		}
+		timeTakenDuration = &d
 	}
 
 	dateTime, err := time.Parse(dateFormat, date)
@@ -124,4 +128,5 @@ func validateProblemSubmission(r []string) (recordSubmission, error) {
 		submissionDate:  dateTime,
 		confidenceLevel: confidenceLevel,
 	}, nil
+
 }

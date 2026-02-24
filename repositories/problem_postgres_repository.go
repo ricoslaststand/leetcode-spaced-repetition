@@ -28,7 +28,7 @@ func NewProblemPostgresRepository(db *sql.DB, logger *zap.Logger) *ProblemPostgr
 }
 
 // SaveProblemSubmission implements ProblemRepository.
-func (r ProblemPostgresRepository) SaveProblemSubmission(c context.Context, problemID int, userID uuid.UUID, date time.Time, timeTaken time.Duration, confidenceLevel models.ConfidenceLevel) error {
+func (r ProblemPostgresRepository) SaveProblemSubmission(c context.Context, problemID int, userID uuid.UUID, date time.Time, timeTaken *time.Duration, confidenceLevel models.ConfidenceLevel) error {
 	tx, err := r.db.BeginTx(c, nil)
 	if err != nil {
 		r.logger.Error("failed to begin transaction", zap.Error(err))
@@ -36,13 +36,18 @@ func (r ProblemPostgresRepository) SaveProblemSubmission(c context.Context, prob
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	var timeTakenVal any
+	if timeTaken != nil {
+		timeTakenVal = fmt.Sprintf("%d seconds", int64(timeTaken.Seconds()))
+	}
+
 	_, err = tx.ExecContext(
 		c,
 		`INSERT INTO problem_submissions (problem_id, user_id, submission_date, time_taken, confidence_level) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (problem_id, user_id, submission_date) DO NOTHING`,
 		problemID,
 		userID,
 		date,
-		fmt.Sprintf("%d seconds", int64(timeTaken.Seconds())),
+		timeTakenVal,
 		confidenceLevel,
 	)
 	if err != nil {
@@ -143,12 +148,13 @@ func (r ProblemPostgresRepository) GetProblemSubmissions(ctx context.Context, pr
 
 		for rows.Next() {
 			var sub models.ProblemSubmissionWithDetails
+			var timeTakenSeconds sql.NullFloat64
 
 			if err := rows.Scan(
 				&sub.ID,
 				&sub.Problem.ID,
 				&sub.SubmittedAt,
-				&sub.TimeTaken,
+				&timeTakenSeconds,
 				&sub.ConfidenceLevel,
 				&sub.Problem.Title,
 				&sub.Problem.Description,
@@ -156,6 +162,11 @@ func (r ProblemPostgresRepository) GetProblemSubmissions(ctx context.Context, pr
 			); err != nil {
 				r.logger.Error("failed to scan problem submission row", zap.Error(err))
 				return []models.ProblemSubmissionWithDetails{}, err
+			}
+
+			if timeTakenSeconds.Valid {
+				v := uint(timeTakenSeconds.Float64)
+				sub.TimeTaken = &v
 			}
 
 			submissions = append(submissions, sub)
@@ -186,18 +197,24 @@ func (r ProblemPostgresRepository) GetProblemSubmissions(ctx context.Context, pr
 
 		for rows.Next() {
 			var sub models.ProblemSubmissionWithDetails
+			var timeTakenSeconds sql.NullFloat64
 
 			if err := rows.Scan(
 				&sub.ID,
 				&sub.Problem.ID,
 				&sub.SubmittedAt,
-				&sub.TimeTaken,
+				&timeTakenSeconds,
 				&sub.ConfidenceLevel,
 				&sub.Problem.Title,
 				&sub.Problem.Description,
 			); err != nil {
 				r.logger.Error("failed to scan problem submission row", zap.Error(err))
 				return []models.ProblemSubmissionWithDetails{}, err
+			}
+
+			if timeTakenSeconds.Valid {
+				v := uint(timeTakenSeconds.Float64)
+				sub.TimeTaken = &v
 			}
 
 			submissions = append(submissions, sub)
@@ -231,16 +248,22 @@ func (r ProblemPostgresRepository) GetSubmissionsByProblemID(c context.Context, 
 
 	for rows.Next() {
 		var sub models.ProblemSubmission
+		var timeTakenSeconds sql.NullFloat64
 
 		if err := rows.Scan(
 			&sub.ID,
 			&sub.ProblemID,
 			&sub.Date,
-			&sub.TimeTaken,
+			&timeTakenSeconds,
 			&sub.ConfidenceLevel,
 		); err != nil {
 			r.logger.Error("failed to scan submission row", zap.Error(err))
 			return []models.ProblemSubmission{}, err
+		}
+
+		if timeTakenSeconds.Valid {
+			v := uint(timeTakenSeconds.Float64)
+			sub.TimeTaken = &v
 		}
 
 		submissions = append(submissions, sub)
