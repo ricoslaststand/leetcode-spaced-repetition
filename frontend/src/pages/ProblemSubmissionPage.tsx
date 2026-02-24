@@ -47,9 +47,11 @@ const confidenceLevelLabels = ["Again", "Hard", "Good", "Easy"]
 
 const formatDate = (dateStr: string): string => {
     if (!dateStr) return "—"
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr.split("T")[0]
-    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+    const datePart = dateStr.split("T")[0]
+    const [year, month, day] = datePart.split("-").map(Number)
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return datePart
+    const d = new Date(Date.UTC(year, month - 1, day))
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })
 }
 
 const formatTimeTaken = (seconds: number): string => {
