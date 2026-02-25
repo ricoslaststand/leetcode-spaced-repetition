@@ -58,7 +58,14 @@ const DashboardPage = () => {
             <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
             <section>
-                <h2 className="text-lg font-medium mb-3">Due for Review</h2>
+                <div className="flex items-center gap-2 mb-3">
+                    <h2 className="text-lg font-medium">Due for Review</h2>
+                    {!isLoading && (data?.overdueCount ?? 0) > 0 && (
+                        <span className="text-sm text-muted-foreground">
+                            ({data!.overdueCount} total)
+                        </span>
+                    )}
+                </div>
                 <Table>
                     <TableHeader>
                         <TableRow>

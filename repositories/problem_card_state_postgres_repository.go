@@ -241,3 +241,21 @@ func (r *ProblemCardStatePostgresRepository) GetLowestStabilityItems(ctx context
 
 	return items, rows.Err()
 }
+
+// GetOverdueProblemCount implements ProblemCardStateRepository.
+func (r *ProblemCardStatePostgresRepository) GetOverdueProblemCount(ctx context.Context, userID uuid.UUID, asOf time.Time) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(
+		ctx,
+		`SELECT COUNT(*) FROM problem_card_states WHERE user_id = $1 AND due <= $2`,
+		userID, asOf,
+	).Scan(&count)
+	if err != nil {
+		r.logger.Error("failed to count overdue problems",
+			zap.String("userID", userID.String()),
+			zap.Error(err),
+		)
+		return 0, err
+	}
+	return count, nil
+}

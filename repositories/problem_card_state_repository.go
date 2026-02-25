@@ -27,4 +27,8 @@ type ProblemCardStateRepository interface {
 	// GetLowestStabilityItems returns problems with the lowest FSRS stability values,
 	// enriched with problem metadata, ordered by stability ASC.
 	GetLowestStabilityItems(ctx context.Context, userID uuid.UUID, limit int) ([]models.ProblemReviewItem, error)
+
+	// GetOverdueProblemCount returns the total number of problems whose due date
+	// is on or before asOf for the given user.
+	GetOverdueProblemCount(ctx context.Context, userID uuid.UUID, asOf time.Time) (int, error)
 }

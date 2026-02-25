@@ -56,6 +56,7 @@ export type ProblemReviewItem = {
 export type DashboardData = {
     due: ProblemReviewItem[];
     lowStability: ProblemReviewItem[];
+    overdueCount: number;
 }
 
 export type ProblemSubmissionWithDetails = {

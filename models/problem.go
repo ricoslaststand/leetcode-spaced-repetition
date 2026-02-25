@@ -120,6 +120,7 @@ type ProblemReviewItem struct {
 type DashboardData struct {
 	Due          []ProblemReviewItem `json:"due"`
 	LowStability []ProblemReviewItem `json:"lowStability"`
+	OverdueCount int                 `json:"overdueCount"`
 }
 
 type ImportSubmissionRowError struct {

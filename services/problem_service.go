@@ -86,9 +86,16 @@ func (s ProblemService) GetDashboard(ctx context.Context, userID uuid.UUID, limi
 		return models.DashboardData{}, err
 	}
 
+	overdueCount, err := s.cardStateRepo.GetOverdueProblemCount(ctx, userID, now)
+	if err != nil {
+		s.logger.Error("failed to get overdue problem count", zap.Error(err))
+		return models.DashboardData{}, err
+	}
+
 	return models.DashboardData{
 		Due:          due,
 		LowStability: lowStability,
+		OverdueCount: overdueCount,
 	}, nil
 }
 
