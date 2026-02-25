@@ -1,3 +1,5 @@
+import { useRouterState } from "@tanstack/react-router"
+import { cn } from "@/lib/utils"
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -7,6 +9,11 @@ import {
 } from "@/components/ui/navigation-menu"
 
 export function MainNav() {
+  const { location } = useRouterState()
+  const pathname = location.pathname
+
+  const activeClass = "bg-accent text-accent-foreground"
+
   return (
     <div className="flex items-center gap-8">
       <a href="/" className="text-sm font-semibold tracking-tight">
@@ -17,7 +24,8 @@ export function MainNav() {
           <NavigationMenuItem>
             <NavigationMenuLink
               href="/"
-              className={navigationMenuTriggerStyle()}
+              active={pathname === '/'}
+              className={cn(navigationMenuTriggerStyle(), pathname === '/' && activeClass)}
             >
               Dashboard
             </NavigationMenuLink>
@@ -26,7 +34,8 @@ export function MainNav() {
           <NavigationMenuItem>
             <NavigationMenuLink
               href="/problems"
-              className={navigationMenuTriggerStyle()}
+              active={pathname === '/problems'}
+              className={cn(navigationMenuTriggerStyle(), pathname === '/problems' && activeClass)}
             >
               Problems
             </NavigationMenuLink>
@@ -35,7 +44,8 @@ export function MainNav() {
           <NavigationMenuItem>
             <NavigationMenuLink
               href="/problems/submissions"
-              className={navigationMenuTriggerStyle()}
+              active={pathname.startsWith('/problems/submissions')}
+              className={cn(navigationMenuTriggerStyle(), pathname.startsWith('/problems/submissions') && activeClass)}
             >
               Submissions
             </NavigationMenuLink>
