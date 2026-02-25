@@ -13,7 +13,7 @@ import { getProblemSubmissionsV2 } from "../api";
 import { Button } from "../components/ui/button";
 import ProblemDifficultyTag from "../components/ProblemDifficultyTag";
 import ConfidenceLevelTag from "../components/ConfidenceLevelTag";
-import { generateLeetcodeURL } from "../lib/leetcodeUtils";
+import { generateLinkForLeetcode } from "../lib/leetcodeUtils";
 
 const formatDate = (dateStr: string): string => {
     if (!dateStr) return "—"
@@ -99,7 +99,7 @@ const ListProblemSubmissionsPage = () => {
                                 </TableCell>
                                 <TableCell>
                                     <a
-                                        href={generateLeetcodeURL(submission.problem.id)}
+                                        href={generateLinkForLeetcode(submission.problem.slug)}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="text-sm text-primary underline-offset-4 hover:underline"
