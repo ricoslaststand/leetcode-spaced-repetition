@@ -17,16 +17,10 @@ export const getProblemByID = async (problemID: string) => {
     return response.data
 }
 
-export const getAllProblems = async (topics: string[]) => {
+export const getAllProblems = async (topics: string[], difficulties: string[]) => {
     const response = await instance.get("/problems", {
-        params: {
-            "topics": topics
-        },
-        paramsSerializer: params => {
-            return qs.stringify(params, {
-                arrayFormat: "repeat"
-            })
-        }
+        params: { topics, difficulties },
+        paramsSerializer: params => qs.stringify(params, { arrayFormat: "repeat" })
     })
 
     return response.data

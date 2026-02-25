@@ -31,8 +31,8 @@ func NewProblemsService(problemsRepo repositories.ProblemRepository, cardStateRe
 	}
 }
 
-func (s ProblemService) GetProblems(ctx context.Context, topics []string, page int, limit int) ([]models.Problem, error) {
-	problems, err := s.problemRepo.GetProblems(ctx, topics, page, limit)
+func (s ProblemService) GetProblems(ctx context.Context, topics []string, difficulties []string, page int, limit int) ([]models.Problem, error) {
+	problems, err := s.problemRepo.GetProblems(ctx, topics, difficulties, page, limit)
 	if err != nil {
 		s.logger.Error("failed to get problems", zap.Error(err))
 	}

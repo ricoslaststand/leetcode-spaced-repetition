@@ -79,8 +79,9 @@ func RegisterRoutes(r *gin.Engine, problemsService *services.ProblemService, log
 // @Router       /problems [get]
 func (c ProblemsController) getProblems(ctx *gin.Context) {
 	topics, _ := ctx.GetQueryArray("topics")
+	difficulties, _ := ctx.GetQueryArray("difficulties")
 
-	problems, err := c.problemsService.GetProblems(ctx, topics, 1, 100)
+	problems, err := c.problemsService.GetProblems(ctx, topics, difficulties, 1, 100)
 	if err != nil {
 		c.logger.Error("failed to get problems", zap.Error(err))
 		ctx.JSON(http.StatusInternalServerError, gin.H{

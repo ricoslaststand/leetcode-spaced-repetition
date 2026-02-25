@@ -81,13 +81,35 @@ func (r ProblemPostgresRepository) GetAllProblemsPastReviewDate(c context.Contex
 	return problems, nil
 }
 
-func (r ProblemPostgresRepository) GetProblems(ctx context.Context, topics []string, page, limit int) ([]models.Problem, error) {
+func (r ProblemPostgresRepository) GetProblems(ctx context.Context, topics []string, difficulties []string, page, limit int) ([]models.Problem, error) {
 	var problems []models.Problem
 
-	rows, err := r.db.QueryContext(
-		ctx, `SELECT id, title, slug, difficulty FROM problems WHERE id IN (
-		SELECT problem_id FROM problem_topics WHERE topic IN ($1)
-	) ORDER BY id LIMIT $2`, strings.Join(topics, ","), limit)
+	query := `SELECT id, title, slug, difficulty FROM problems`
+	var conditions []string
+	var args []interface{}
+	argIdx := 1
+
+	if len(topics) > 0 {
+		conditions = append(conditions, fmt.Sprintf(
+			"id IN (SELECT problem_id FROM problem_topics WHERE topic = ANY($%d))", argIdx))
+		args = append(args, pq.Array(topics))
+		argIdx++
+	}
+
+	if len(difficulties) > 0 {
+		conditions = append(conditions, fmt.Sprintf("difficulty = ANY($%d)", argIdx))
+		args = append(args, pq.Array(difficulties))
+		argIdx++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query += fmt.Sprintf(" ORDER BY id LIMIT $%d", argIdx)
+	args = append(args, limit)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("failed to query problems", zap.Error(err))
 		return problems, err

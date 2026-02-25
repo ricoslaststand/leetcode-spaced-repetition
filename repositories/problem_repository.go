@@ -14,7 +14,7 @@ type ProblemRepository interface {
 	GetProblemByID(c context.Context, id int) (*models.Problem, error)
 	GetProblemStatsByID(c context.Context, id int) (*models.ProblemSubmissionUserStats, error)
 	GetAllProblemsPastReviewDate(c context.Context, limit uint) ([]models.Problem, error)
-	GetProblems(c context.Context, topics []string, page, limit int) ([]models.Problem, error)
+	GetProblems(c context.Context, topics []string, difficulties []string, page, limit int) ([]models.Problem, error)
 	GetAllProblemTopics(c context.Context) ([]string, error)
 	GetTopicsForProblem(c context.Context, ID int) ([]string, error)
 	SaveProblem(c context.Context, problem *models.Problem) error
