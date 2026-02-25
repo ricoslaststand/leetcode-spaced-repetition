@@ -212,6 +212,67 @@ func TestImportSubmissions_MissingFile(t *testing.T) {
 	}
 }
 
+func TestImportSubmissions_ComputesCardState(t *testing.T) {
+	insertTestProblem(t, testProblem)
+	clearSubmissions(t)
+	clearCardStates(t)
+
+	xlsxBuf := makeXLSXFile(t, [][]string{
+		{"1", "2025-06-15", "1m30s", "3"},
+	})
+
+	w := httptest.NewRecorder()
+	req := multipartFileRequest(t, "/problems/submissions/import", xlsxBuf.Bytes())
+	testRouter.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("import returned %d: %s", w.Code, w.Body.String())
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if result["imported"].(float64) != 1 {
+		t.Fatalf("expected 1 imported, got %v (errors: %v)", result["imported"], result["errors"])
+	}
+
+	var count int
+	if err := testDB.QueryRow(`SELECT COUNT(*) FROM problem_card_states WHERE problem_id = 1`).Scan(&count); err != nil {
+		t.Fatalf("failed to query card states: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected 1 card state row, got %d", count)
+	}
+}
+
+func TestImportSubmissions_IdempotentCardState(t *testing.T) {
+	insertTestProblem(t, testProblem)
+	clearSubmissions(t)
+	clearCardStates(t)
+
+	xlsxBuf := makeXLSXFile(t, [][]string{
+		{"1", "2025-06-15", "1m30s", "3"},
+	})
+
+	for i := range 2 {
+		w := httptest.NewRecorder()
+		req := multipartFileRequest(t, "/problems/submissions/import", xlsxBuf.Bytes())
+		testRouter.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("import %d returned %d: %s", i+1, w.Code, w.Body.String())
+		}
+	}
+
+	var count int
+	if err := testDB.QueryRow(`SELECT COUNT(*) FROM problem_card_states WHERE problem_id = 1`).Scan(&count); err != nil {
+		t.Fatalf("failed to query card states: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected 1 card state after two identical imports, got %d", count)
+	}
+}
+
 // multipartFileRequest constructs a multipart/form-data POST request with the
 // xlsx file content attached under the "file" field name.
 func multipartFileRequest(t *testing.T, url string, xlsxData []byte) *http.Request {

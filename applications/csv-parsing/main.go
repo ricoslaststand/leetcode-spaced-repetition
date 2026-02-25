@@ -51,7 +51,8 @@ func main() {
 	logger.Info("constructing domain layers")
 
 	problemsRepo := repositories.NewProblemPostgresRepository(db, logger)
-	problemsService := services.NewProblemsService(problemsRepo, logger)
+	cardStateRepo := repositories.NewProblemCardStatePostgresRepository(db, logger)
+	problemsService := services.NewProblemsService(problemsRepo, cardStateRepo, logger)
 
 	file, err := os.Open("leetcode_submissions.csv")
 	if err != nil {
@@ -81,7 +82,7 @@ func main() {
 
 		userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
 
-		if err = problemsService.SaveProblemSubmission(c, submission.problemNumber, userID, submission.submissionDate, submission.timeTaken, submission.confidenceLevel); err != nil {
+		if err = problemsService.SaveProblemSubmission(c, submission.problemNumber, userID, submission.submissionDate, submission.timeTaken, submission.confidenceLevel, nil); err != nil {
 			logger.Error("failed to save problem submission", zap.Int("problemNumber", submission.problemNumber), zap.Error(err))
 		} else {
 			logger.Info("saved problem submission", zap.Int("problemNumber", submission.problemNumber))

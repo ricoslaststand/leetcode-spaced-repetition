@@ -28,11 +28,12 @@ func NewProblemPostgresRepository(db *sql.DB, logger *zap.Logger) *ProblemPostgr
 }
 
 // SaveProblemSubmission implements ProblemRepository.
-func (r ProblemPostgresRepository) SaveProblemSubmission(c context.Context, problemID int, userID uuid.UUID, date time.Time, timeTaken *time.Duration, confidenceLevel models.ConfidenceLevel) error {
+// Returns (true, nil) if a row was inserted, (false, nil) if skipped due to a conflict, or (false, err) on error.
+func (r ProblemPostgresRepository) SaveProblemSubmission(c context.Context, problemID int, userID uuid.UUID, date time.Time, timeTaken *time.Duration, confidenceLevel models.ConfidenceLevel, language *models.SubmissionLanguage) (bool, error) {
 	tx, err := r.db.BeginTx(c, nil)
 	if err != nil {
 		r.logger.Error("failed to begin transaction", zap.Error(err))
-		return err
+		return false, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
@@ -41,26 +42,37 @@ func (r ProblemPostgresRepository) SaveProblemSubmission(c context.Context, prob
 		timeTakenVal = fmt.Sprintf("%d seconds", int64(timeTaken.Seconds()))
 	}
 
-	_, err = tx.ExecContext(
+	result, err := tx.ExecContext(
 		c,
-		`INSERT INTO problem_submissions (problem_id, user_id, submission_date, time_taken, confidence_level) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (problem_id, user_id, submission_date) DO NOTHING`,
+		`INSERT INTO problem_submissions (problem_id, user_id, submission_date, time_taken, confidence_level, language) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (problem_id, user_id, submission_date) DO NOTHING`,
 		problemID,
 		userID,
 		date,
 		timeTakenVal,
 		confidenceLevel,
+		language,
 	)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23503" {
 			r.logger.Error("foreign key violation saving problem submission", zap.Int("problemID", problemID), zap.Error(err))
-			return fmt.Errorf("foreign key violation: %v", pqErr.Message)
+			return false, fmt.Errorf("foreign key violation: %v", pqErr.Message)
 		}
 		r.logger.Error("failed to save problem submission", zap.Int("problemID", problemID), zap.Error(err))
-		return err
+		return false, err
 	}
 
-	return tx.Commit()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		r.logger.Error("failed to get rows affected", zap.Int("problemID", problemID), zap.Error(err))
+		return false, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+
+	return rowsAffected == 1, nil
 }
 
 // GetAllProblemsPastReviewDate implements ProblemRepository.

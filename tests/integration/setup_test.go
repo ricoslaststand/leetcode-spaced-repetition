@@ -72,7 +72,8 @@ func TestMain(m *testing.M) {
 	logger := zap.NewNop()
 
 	problemsRepo := repositories.NewProblemPostgresRepository(testDB, logger)
-	problemsService := services.NewProblemsService(problemsRepo, logger)
+	cardStateRepo := repositories.NewProblemCardStatePostgresRepository(testDB, logger)
+	problemsService := services.NewProblemsService(problemsRepo, cardStateRepo, logger)
 
 	testRouter = gin.New()
 	controllers.RegisterRoutes(testRouter, problemsService, logger)
@@ -113,6 +114,14 @@ func clearSubmissions(t *testing.T) {
 	t.Helper()
 	if _, err := testDB.Exec(`DELETE FROM problem_submissions`); err != nil {
 		t.Fatalf("clearSubmissions: %v", err)
+	}
+}
+
+// clearCardStates deletes all rows from problem_card_states between tests.
+func clearCardStates(t *testing.T) {
+	t.Helper()
+	if _, err := testDB.Exec(`DELETE FROM problem_card_states`); err != nil {
+		t.Fatalf("clearCardStates: %v", err)
 	}
 }
 

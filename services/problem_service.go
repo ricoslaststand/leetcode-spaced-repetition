@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"leetcode-spaced-repetition/internal/utils"
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/repositories"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -16,14 +18,16 @@ import (
 )
 
 type ProblemService struct {
-	problemRepo repositories.ProblemRepository
-	logger      *zap.Logger
+	problemRepo   repositories.ProblemRepository
+	cardStateRepo repositories.ProblemCardStateRepository
+	logger        *zap.Logger
 }
 
-func NewProblemsService(problemsRepo repositories.ProblemRepository, logger *zap.Logger) *ProblemService {
+func NewProblemsService(problemsRepo repositories.ProblemRepository, cardStateRepo repositories.ProblemCardStateRepository, logger *zap.Logger) *ProblemService {
 	return &ProblemService{
-		problemRepo: problemsRepo,
-		logger:      logger,
+		problemRepo:   problemsRepo,
+		cardStateRepo: cardStateRepo,
+		logger:        logger,
 	}
 }
 
@@ -85,6 +89,15 @@ func (s ProblemService) GetAllSubmissionsForProblem(c context.Context, problemID
 	return submissions, nil
 }
 
+// parsedSubmissionRow holds a successfully parsed Excel row before any DB work.
+type parsedSubmissionRow struct {
+	rowNumber       int
+	problemID       int
+	submissionDate  time.Time
+	timeTaken       *time.Duration
+	confidenceLevel models.ConfidenceLevel
+}
+
 func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (models.ImportSubmissionsResult, error) {
 	result := models.ImportSubmissionsResult{
 		Errors: make([]models.ImportSubmissionRowError, 0),
@@ -101,6 +114,9 @@ func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (mod
 	if err != nil {
 		return result, fmt.Errorf("failed to read sheet: %w", err)
 	}
+
+	// Phase 1: Parse all rows, collecting errors without touching the DB.
+	var validRows []parsedSubmissionRow
 
 	for i, row := range rows {
 		if i == 0 {
@@ -185,20 +201,67 @@ func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (mod
 			continue
 		}
 
-		if err := s.problemRepo.SaveProblemSubmission(ctx, problemNumber, uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"), submissionDate, timeTaken, confidenceLevel); err != nil {
+		validRows = append(validRows, parsedSubmissionRow{
+			rowNumber:       rowNumber,
+			problemID:       problemNumber,
+			submissionDate:  submissionDate,
+			timeTaken:       timeTaken,
+			confidenceLevel: confidenceLevel,
+		})
+	}
+
+	// Phase 2: Sort valid rows by submissionDate ascending for correct FSRS chronological order.
+	sort.Slice(validRows, func(i, j int) bool {
+		return validRows[i].submissionDate.Before(validRows[j].submissionDate)
+	})
+
+	// Phase 3: Save submissions and compute FSRS card states.
+	userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
+
+	for _, row := range validRows {
+		inserted, err := s.problemRepo.SaveProblemSubmission(ctx, row.problemID, userID, row.submissionDate, row.timeTaken, row.confidenceLevel, nil)
+		if err != nil {
 			s.logger.Error("failed to save imported submission",
-				zap.Int("row", rowNumber),
-				zap.Int("problemID", problemNumber),
+				zap.Int("row", row.rowNumber),
+				zap.Int("problemID", row.problemID),
 				zap.Error(err),
 			)
 			result.Errors = append(result.Errors, models.ImportSubmissionRowError{
-				Row:    rowNumber,
+				Row:    row.rowNumber,
 				Reason: fmt.Sprintf("failed to save: %s", err.Error()),
 			})
 			continue
 		}
 
+		if !inserted {
+			result.Skipped++
+			continue
+		}
+
 		result.Imported++
+
+		// Compute and upsert the FSRS card state for this newly inserted submission.
+		currentState, err := s.cardStateRepo.GetProblemCardStateByProblemID(ctx, userID, row.problemID)
+		if err != nil {
+			s.logger.Error("failed to fetch card state for FSRS computation",
+				zap.Int("row", row.rowNumber),
+				zap.Int("problemID", row.problemID),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		newState := utils.ApplyReview(currentState, row.confidenceLevel, row.submissionDate)
+		newState.ProblemID = row.problemID
+		newState.UserID = userID
+
+		if err := s.cardStateRepo.UpsertProblemCardState(ctx, newState); err != nil {
+			s.logger.Error("failed to upsert card state",
+				zap.Int("row", row.rowNumber),
+				zap.Int("problemID", row.problemID),
+				zap.Error(err),
+			)
+		}
 	}
 
 	return result, nil
@@ -211,10 +274,31 @@ func (s ProblemService) SaveProblemSubmission(
 	date time.Time,
 	timeTaken *time.Duration,
 	confidenceLevel models.ConfidenceLevel,
+	language *models.SubmissionLanguage,
 ) error {
-	err := s.problemRepo.SaveProblemSubmission(c, problemID, userID, date, timeTaken, confidenceLevel)
+	inserted, err := s.problemRepo.SaveProblemSubmission(c, problemID, userID, date, timeTaken, confidenceLevel, language)
 	if err != nil {
 		s.logger.Error("failed to save problem submission", zap.Int("problemID", problemID), zap.Error(err))
+		return err
 	}
-	return err
+
+	if !inserted {
+		return nil
+	}
+
+	currentState, err := s.cardStateRepo.GetProblemCardStateByProblemID(c, userID, problemID)
+	if err != nil {
+		s.logger.Error("failed to fetch card state for FSRS computation", zap.Int("problemID", problemID), zap.Error(err))
+		return nil
+	}
+
+	newState := utils.ApplyReview(currentState, confidenceLevel, date)
+	newState.ProblemID = problemID
+	newState.UserID = userID
+
+	if err := s.cardStateRepo.UpsertProblemCardState(c, newState); err != nil {
+		s.logger.Error("failed to upsert card state", zap.Int("problemID", problemID), zap.Error(err))
+	}
+
+	return nil
 }

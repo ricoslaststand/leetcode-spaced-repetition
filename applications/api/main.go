@@ -44,7 +44,8 @@ func main() {
 	}
 
 	problemsRepo := repositories.NewProblemPostgresRepository(db, logger)
-	problemsService := services.NewProblemsService(problemsRepo, logger)
+	cardStateRepo := repositories.NewProblemCardStatePostgresRepository(db, logger)
+	problemsService := services.NewProblemsService(problemsRepo, cardStateRepo, logger)
 
 	router := gin.Default()
 	router.Use(cors.Default()) // All origins allowed by default
