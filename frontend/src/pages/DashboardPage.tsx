@@ -48,8 +48,10 @@ const ProblemTableRow = ({ item, extraCell }: { item: ProblemReviewItem; extraCe
     </TableRow>
 )
 
+const DASHBOARD_TABLE_LIMIT = 10
+
 const DashboardPage = () => {
-    const { data, isLoading } = useDashboard()
+    const { data, isLoading } = useDashboard(DASHBOARD_TABLE_LIMIT)
 
     return (
         <div className="space-y-10">

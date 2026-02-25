@@ -5,6 +5,7 @@ import (
 	"leetcode-spaced-repetition/services"
 	"net/http"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -99,13 +100,13 @@ func (c ProblemsController) getProblems(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
-// GetProblemByID godoc
+// getProblemByID godoc
 // @Summary      Get a problem by ID
 // @Description  Returns a single problem including its topics
 // @Tags         problems
 // @Produce      json
 // @Param        id   path  int  true  "Problem ID"
-// @Success      200  {object}  models.Problem
+// @Success      200  {object}  models.ProblemDetail
 // @Failure      400  {object}  map[string]string
 // @Failure      404  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
@@ -144,10 +145,25 @@ func (c ProblemsController) GetProblemByID(context *gin.Context) {
 		})
 		return
 	}
-
 	problem.Topics = topics
 
-	context.JSON(200, *problem)
+	userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
+	cardState, err := c.problemsService.GetProblemCardState(context, userID, problemID)
+	if err != nil {
+		c.logger.Error("failed to get card state for problem", zap.Int("problemID", problemID), zap.Error(err))
+		context.JSON(500, gin.H{
+			"error": "An internal server error has occurred.",
+		})
+		return
+	}
+
+	var stability *float64
+	if cardState != nil {
+		s := cardState.Stability
+		stability = &s
+	}
+
+	context.JSON(200, models.ProblemDetail{Problem: *problem, Stability: stability})
 }
 
 // getProblemSubmissions godoc
@@ -315,13 +331,22 @@ func (c ProblemsController) ImportSubmissions(ctx *gin.Context) {
 // @Description  Returns problems due for review and problems with the lowest FSRS stability
 // @Tags         dashboard
 // @Produce      json
+// @Param        limit  query     int  false  "Number of items per table (1–50, default 10)"
 // @Success      200  {object}  models.DashboardData
+// @Failure      400  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /dashboard [get]
 func (c ProblemsController) GetDashboard(ctx *gin.Context) {
 	userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
 
-	data, err := c.problemsService.GetDashboard(ctx, userID)
+	limitStr := ctx.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 50 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "limit must be between 1 and 50"})
+		return
+	}
+
+	data, err := c.problemsService.GetDashboard(ctx, userID, limit)
 	if err != nil {
 		c.logger.Error("failed to get dashboard data", zap.Error(err))
 		ctx.JSON(http.StatusInternalServerError, gin.H{

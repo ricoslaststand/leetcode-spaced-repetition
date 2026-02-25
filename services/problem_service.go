@@ -71,16 +71,16 @@ func (s ProblemService) GetTopicsForProblem(c context.Context, ID int) ([]string
 	return topics, err
 }
 
-func (s ProblemService) GetDashboard(ctx context.Context, userID uuid.UUID) (models.DashboardData, error) {
+func (s ProblemService) GetDashboard(ctx context.Context, userID uuid.UUID, limit int) (models.DashboardData, error) {
 	now := time.Now().UTC()
 
-	due, err := s.cardStateRepo.GetDueReviewItems(ctx, userID, now, 50)
+	due, err := s.cardStateRepo.GetDueReviewItems(ctx, userID, now, limit)
 	if err != nil {
 		s.logger.Error("failed to get due review items", zap.Error(err))
 		return models.DashboardData{}, err
 	}
 
-	lowStability, err := s.cardStateRepo.GetLowestStabilityItems(ctx, userID, 20)
+	lowStability, err := s.cardStateRepo.GetLowestStabilityItems(ctx, userID, limit)
 	if err != nil {
 		s.logger.Error("failed to get lowest stability items", zap.Error(err))
 		return models.DashboardData{}, err
@@ -90,6 +90,10 @@ func (s ProblemService) GetDashboard(ctx context.Context, userID uuid.UUID) (mod
 		Due:          due,
 		LowStability: lowStability,
 	}, nil
+}
+
+func (s ProblemService) GetProblemCardState(ctx context.Context, userID uuid.UUID, problemID int) (*models.ProblemCardState, error) {
+	return s.cardStateRepo.GetProblemCardStateByProblemID(ctx, userID, problemID)
 }
 
 func (s ProblemService) GetAllProblemsPastReviewDate(c context.Context, limit uint) ([]models.Problem, error) {

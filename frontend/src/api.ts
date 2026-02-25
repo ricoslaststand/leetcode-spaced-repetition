@@ -67,8 +67,8 @@ export const createProblemSubmission
     return response.data
 }
 
-export const getDashboard = async (): Promise<DashboardData> => {
-    const response = await instance.get('/dashboard')
+export const getDashboard = async (limit: number): Promise<DashboardData> => {
+    const response = await instance.get('/dashboard', { params: { limit } })
     return response.data
 }
 

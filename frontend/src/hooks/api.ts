@@ -58,7 +58,7 @@ export function useProblem(problemId?: string) {
   return { data, error, isLoading }
 }
 
-export function useDashboard() {
+export function useDashboard(limit: number) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -69,7 +69,7 @@ export function useDashboard() {
       setError(null)
 
       try {
-        const result = await getDashboard()
+        const result = await getDashboard(limit)
         setData(result)
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Unknown error"))
@@ -79,7 +79,7 @@ export function useDashboard() {
     }
 
     fetchData()
-  }, [])
+  }, [limit])
 
   return { data, error, isLoading }
 }

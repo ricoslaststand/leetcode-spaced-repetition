@@ -19,11 +19,16 @@ const ProblemMetadataPage: FC = () => {
     return (
         <div>
             <div className="mb-6">
-                <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
+                <h1 className="text-2xl font-semibold tracking-tight">
                     {problem ? `${problemId}. ${problem.title}` : `#${problemId}`}
-                    {problem && <ProblemDifficultyTag difficulty={problem.difficulty} />}
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1">Submission History</p>
+                {problem && (
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <ProblemDifficultyTag difficulty={problem.difficulty} />
+                        <span>Stability: {problem.stability != null ? problem.stability.toFixed(2) : '—'}</span>
+                        <span># of Submissions: {data?.data?.length ?? 0}</span>
+                    </div>
+                )}
             </div>
             {isLoading && (
                 <div className="flex justify-center py-12">

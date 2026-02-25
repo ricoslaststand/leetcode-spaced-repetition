@@ -103,6 +103,11 @@ type (
 	}
 )
 
+type ProblemDetail struct {
+	Problem
+	Stability *float64 `json:"stability"`
+}
+
 type ProblemReviewItem struct {
 	ProblemID  int               `json:"problemId"`
 	Title      string            `json:"title"`
