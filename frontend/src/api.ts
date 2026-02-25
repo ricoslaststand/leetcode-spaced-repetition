@@ -1,5 +1,6 @@
 import axios from 'axios';
 import qs from 'qs';
+import type { DashboardData } from './models/Problem';
 
 const instance = axios.create({
     baseURL: "http://localhost:8000",
@@ -55,13 +56,19 @@ export const getProblemSubmissionsV2 = async (problemIds: number[]) => {
 }
 
 export const createProblemSubmission
-    = async (problemID: number, confidenceLevel: string, timeTaken?: number) => {
+    = async (problemID: number, confidenceLevel: string, timeTaken?: number, language?: string) => {
     const response = await instance.post(`/problems/submissions`, {
         problemId: problemID,
         confidenceLevel,
-        timeTaken
+        timeTaken,
+        language
     })
 
+    return response.data
+}
+
+export const getDashboard = async (): Promise<DashboardData> => {
+    const response = await instance.get('/dashboard')
     return response.data
 }
 

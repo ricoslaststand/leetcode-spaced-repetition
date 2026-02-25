@@ -165,3 +165,79 @@ func (r *ProblemCardStatePostgresRepository) GetProblemCardStatesDueForReview(ct
 
 	return states, rows.Err()
 }
+
+// GetDueReviewItems implements ProblemCardStateRepository.
+func (r *ProblemCardStatePostgresRepository) GetDueReviewItems(ctx context.Context, userID uuid.UUID, asOf time.Time, limit int) ([]models.ProblemReviewItem, error) {
+	items := []models.ProblemReviewItem{}
+
+	rows, err := r.db.QueryContext(
+		ctx,
+		`SELECT p.id, p.title, p.slug, p.difficulty, pcs.due, pcs.stability
+		FROM problem_card_states pcs
+		JOIN problems p ON pcs.problem_id = p.id
+		WHERE pcs.user_id = $1 AND pcs.due <= $2
+		ORDER BY pcs.due ASC
+		LIMIT $3`,
+		userID, asOf, limit,
+	)
+	if err != nil {
+		r.logger.Error("failed to query due review items",
+			zap.String("userID", userID.String()),
+			zap.Error(err),
+		)
+		return items, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item models.ProblemReviewItem
+		if err := rows.Scan(
+			&item.ProblemID, &item.Title, &item.Slug,
+			&item.Difficulty, &item.Due, &item.Stability,
+		); err != nil {
+			r.logger.Error("failed to scan due review item row", zap.Error(err))
+			return items, err
+		}
+		items = append(items, item)
+	}
+
+	return items, rows.Err()
+}
+
+// GetLowestStabilityItems implements ProblemCardStateRepository.
+func (r *ProblemCardStatePostgresRepository) GetLowestStabilityItems(ctx context.Context, userID uuid.UUID, limit int) ([]models.ProblemReviewItem, error) {
+	items := []models.ProblemReviewItem{}
+
+	rows, err := r.db.QueryContext(
+		ctx,
+		`SELECT p.id, p.title, p.slug, p.difficulty, pcs.due, pcs.stability
+		FROM problem_card_states pcs
+		JOIN problems p ON pcs.problem_id = p.id
+		WHERE pcs.user_id = $1
+		ORDER BY pcs.stability ASC
+		LIMIT $2`,
+		userID, limit,
+	)
+	if err != nil {
+		r.logger.Error("failed to query lowest stability items",
+			zap.String("userID", userID.String()),
+			zap.Error(err),
+		)
+		return items, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item models.ProblemReviewItem
+		if err := rows.Scan(
+			&item.ProblemID, &item.Title, &item.Slug,
+			&item.Difficulty, &item.Due, &item.Stability,
+		); err != nil {
+			r.logger.Error("failed to scan lowest stability item row", zap.Error(err))
+			return items, err
+		}
+		items = append(items, item)
+	}
+
+	return items, rows.Err()
+}

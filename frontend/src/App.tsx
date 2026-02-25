@@ -1,10 +1,11 @@
 import './App.css'
 
-import { createRootRoute, createRoute, createRouter, redirect, RouterProvider } from '@tanstack/react-router'
+import { createRootRoute, createRoute, createRouter, RouterProvider } from '@tanstack/react-router'
 import ProblemSubmissionPage from './pages/ProblemSubmissionPage'
 import ProblemsPage from './pages/ProblemsPage'
 import ProblemMetadataPage from './pages/ProblemMetadataPage'
 import ListProblemSubmissionsPage from './pages/ListProblemSubmissionsPage'
+import DashboardPage from './pages/DashboardPage'
 import { Toaster } from 'sonner'
 import { AuthenticatedLayout } from './layouts/AuthenticatedLayout'
 
@@ -15,10 +16,10 @@ const layoutRoute = createRoute({
   component: () => <AuthenticatedLayout />,
 })
 
-const homeRedirectRoute = createRoute({
+const dashboardRoute = createRoute({
   getParentRoute: () => layoutRoute,
   path: '/',
-  beforeLoad: () => { throw redirect({ to: '/problems' }) }
+  component: () => <DashboardPage />,
 })
 
 const problemsRoute = createRoute({
@@ -52,7 +53,7 @@ const problemSubmissionsRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   layoutRoute.addChildren([
-    homeRedirectRoute,
+    dashboardRoute,
   ]),
   problemsRoute.addChildren([
     problemsListRoute,

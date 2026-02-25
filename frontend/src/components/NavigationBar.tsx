@@ -16,6 +16,15 @@ export function MainNav() {
         <NavigationMenuList>
           <NavigationMenuItem>
             <NavigationMenuLink
+              href="/"
+              className={navigationMenuTriggerStyle()}
+            >
+              Dashboard
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+
+          <NavigationMenuItem>
+            <NavigationMenuLink
               href="/problems"
               className={navigationMenuTriggerStyle()}
             >

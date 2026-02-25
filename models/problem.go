@@ -26,6 +26,30 @@ const (
 	EasyConfidence  ConfidenceLevel = "easy"
 )
 
+type SubmissionLanguage string
+
+const (
+	LangCPP        SubmissionLanguage = "cpp"
+	LangJava       SubmissionLanguage = "java"
+	LangPython     SubmissionLanguage = "python"
+	LangPython3    SubmissionLanguage = "python3"
+	LangC          SubmissionLanguage = "c"
+	LangCSharp     SubmissionLanguage = "csharp"
+	LangJavaScript SubmissionLanguage = "javascript"
+	LangTypeScript SubmissionLanguage = "typescript"
+	LangPHP        SubmissionLanguage = "php"
+	LangSwift      SubmissionLanguage = "swift"
+	LangKotlin     SubmissionLanguage = "kotlin"
+	LangDart       SubmissionLanguage = "dart"
+	LangGolang     SubmissionLanguage = "golang"
+	LangRuby       SubmissionLanguage = "ruby"
+	LangScala      SubmissionLanguage = "scala"
+	LangRust       SubmissionLanguage = "rust"
+	LangRacket     SubmissionLanguage = "racket"
+	LangErlang     SubmissionLanguage = "erlang"
+	LangElixir     SubmissionLanguage = "elixir"
+)
+
 type (
 	Problem struct {
 		ID          int               `json:"id"`
@@ -43,11 +67,12 @@ type (
 	}
 
 	ProblemSubmission struct {
-		ID              uuid.UUID       `json:"id"`
-		ProblemID       int             `json:"problemId"`
-		Date            time.Time       `json:"date"`
-		TimeTaken       *uint           `json:"timeTaken"`
-		ConfidenceLevel ConfidenceLevel `json:"confidenceLevel"`
+		ID              uuid.UUID          `json:"id"`
+		ProblemID       int                `json:"problemId"`
+		Date            time.Time          `json:"date"`
+		TimeTaken       *uint              `json:"timeTaken"`
+		ConfidenceLevel ConfidenceLevel    `json:"confidenceLevel"`
+		Language        *SubmissionLanguage `json:"language"`
 	}
 
 	ProblemSubmissionWithDetails struct {
@@ -77,6 +102,20 @@ type (
 		Card      fsrs.Card `json:"card"`
 	}
 )
+
+type ProblemReviewItem struct {
+	ProblemID  int               `json:"problemId"`
+	Title      string            `json:"title"`
+	Slug       string            `json:"slug"`
+	Difficulty ProblemDifficulty `json:"difficulty"`
+	Due        time.Time         `json:"due"`
+	Stability  float64           `json:"stability"`
+}
+
+type DashboardData struct {
+	Due          []ProblemReviewItem `json:"due"`
+	LowStability []ProblemReviewItem `json:"lowStability"`
+}
 
 type ImportSubmissionRowError struct {
 	Row    int    `json:"row"`

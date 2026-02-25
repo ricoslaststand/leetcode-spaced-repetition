@@ -71,6 +71,27 @@ func (s ProblemService) GetTopicsForProblem(c context.Context, ID int) ([]string
 	return topics, err
 }
 
+func (s ProblemService) GetDashboard(ctx context.Context, userID uuid.UUID) (models.DashboardData, error) {
+	now := time.Now().UTC()
+
+	due, err := s.cardStateRepo.GetDueReviewItems(ctx, userID, now, 50)
+	if err != nil {
+		s.logger.Error("failed to get due review items", zap.Error(err))
+		return models.DashboardData{}, err
+	}
+
+	lowStability, err := s.cardStateRepo.GetLowestStabilityItems(ctx, userID, 20)
+	if err != nil {
+		s.logger.Error("failed to get lowest stability items", zap.Error(err))
+		return models.DashboardData{}, err
+	}
+
+	return models.DashboardData{
+		Due:          due,
+		LowStability: lowStability,
+	}, nil
+}
+
 func (s ProblemService) GetAllProblemsPastReviewDate(c context.Context, limit uint) ([]models.Problem, error) {
 	problems, err := s.problemRepo.GetAllProblemsPastReviewDate(c, limit)
 	if err != nil {

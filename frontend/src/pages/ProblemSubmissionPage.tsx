@@ -6,7 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
 import type { ConfidenceLevel as ConfidenceLevelType } from '../models/Problem';
-import { ConfidenceLevel, confidenceLevelToString } from '../models/Problem';
+import { ConfidenceLevel, confidenceLevelToString, SUBMISSION_LANGUAGES } from '../models/Problem';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Input } from '../components/ui/input';
 import { Slider } from '../components/ui/slider';
 import { Field, FieldGroup, FieldLabel } from '../components/ui/field';
@@ -39,7 +40,8 @@ const confidenceLevelLabels = ["Again", "Hard", "Good", "Easy"]
 const formSchema = z.object({
     problemId: z.string(),
     confidenceLevel: z.number().min(ConfidenceLevel.Again).max(ConfidenceLevel.Easy),
-    timeTaken: z.number().min(0).optional()
+    timeTaken: z.number().min(0).optional(),
+    language: z.string().optional(),
 })
 
 const ProblemSubmissionPage: React.FC = () => {
@@ -52,6 +54,7 @@ const ProblemSubmissionPage: React.FC = () => {
         defaultValues: {
             problemId: "",
             confidenceLevel: ConfidenceLevel.Good,
+            language: 'python3',
         }
     })
 
@@ -81,7 +84,8 @@ const ProblemSubmissionPage: React.FC = () => {
         await createProblemSubmission(
             parseInt(data.problemId),
             confidenceLevelToString(data.confidenceLevel as ConfidenceLevelType),
-            timeTaken
+            timeTaken,
+            data.language
         )
         toast.success("Submission logged!")
         form.reset()
@@ -109,7 +113,7 @@ const ProblemSubmissionPage: React.FC = () => {
                         )}
                     />
 
-                    <FieldGroup className="grid grid-cols-2 gap-6 my-6">
+                    <FieldGroup className="grid grid-cols-3 gap-6 my-6">
                         <Controller
                             name="confidenceLevel"
                             control={form.control}
@@ -146,6 +150,28 @@ const ProblemSubmissionPage: React.FC = () => {
                                     valueSeconds={field.value ?? 0}
                                     onChangeSeconds={field.onChange}
                                 />
+                            )}
+                        />
+
+                        <Controller
+                            name="language"
+                            control={form.control}
+                            render={({ field }) => (
+                                <Field>
+                                    <FieldLabel>Language</FieldLabel>
+                                    <Select value={field.value} onValueChange={field.onChange}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select a language" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {SUBMISSION_LANGUAGES.map(lang => (
+                                                <SelectItem key={lang.value} value={lang.value}>
+                                                    {lang.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
                             )}
                         />
                     </FieldGroup>

@@ -88,3 +88,15 @@ seed-db:
 	@echo "Seeding database with leetcode problems"
 	@docker build -t data-seeding -f Dockerfile.data-seeding .
 	@docker run --rm --name db-seeding --network leetcode-spaced-repetition_app-network data-seeding:latest
+
+logs-app:
+	@docker logs leetcode-buddy-app-frontend
+
+logs-app-tail:
+	@docker logs -f leetcode-buddy-app-frontend
+
+logs-api:
+	@docker logs leetcode-buddy-app-api
+
+logs-api-tail:
+	@docker logs -f leetcode-buddy-app-api

@@ -25,9 +25,10 @@ type getProblemSubmissionsRequest struct {
 }
 
 type saveProblemSubmissionRequest struct {
-	ProblemID       int    `json:"problemId" binding:"required,number" validate:"gte=1"`
-	TimeTaken       *int   `json:"timeTaken"`
-	ConfidenceLevel string `json:"confidenceLevel" binding:"required"`
+	ProblemID       int     `json:"problemId" binding:"required,number" validate:"gte=1"`
+	TimeTaken       *int    `json:"timeTaken"`
+	ConfidenceLevel string  `json:"confidenceLevel" binding:"required"`
+	Language        *string `json:"language"`
 }
 
 var validDate validator.Func = func(fl validator.FieldLevel) bool {
@@ -51,6 +52,8 @@ func RegisterRoutes(r *gin.Engine, problemsService *services.ProblemService, log
 	}
 
 	problemsController := ProblemsController{problemsService: *problemsService, logger: logger}
+
+	r.GET("/dashboard", problemsController.GetDashboard)
 
 	problemsGroup := r.Group("/problems")
 	problemsGroup.GET("", problemsController.getProblems)
@@ -238,6 +241,12 @@ func (c ProblemsController) SaveProblemSubmission(context *gin.Context) {
 		timeTaken = &d
 	}
 
+	var language *models.SubmissionLanguage
+	if problemSubmissionRequest.Language != nil {
+		l := models.SubmissionLanguage(*problemSubmissionRequest.Language)
+		language = &l
+	}
+
 	if err := c.problemsService.SaveProblemSubmission(
 		context,
 		problemSubmissionRequest.ProblemID,
@@ -245,6 +254,7 @@ func (c ProblemsController) SaveProblemSubmission(context *gin.Context) {
 		time.Now(),
 		timeTaken,
 		models.ConfidenceLevel(problemSubmissionRequest.ConfidenceLevel),
+		language,
 	); err != nil {
 		c.logger.Error("failed to save problem submission", zap.Int("problemID", problemSubmissionRequest.ProblemID), zap.Error(err))
 		context.JSON(500, gin.H{
@@ -298,6 +308,29 @@ func (c ProblemsController) ImportSubmissions(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, result)
+}
+
+// GetDashboard godoc
+// @Summary      Dashboard summary
+// @Description  Returns problems due for review and problems with the lowest FSRS stability
+// @Tags         dashboard
+// @Produce      json
+// @Success      200  {object}  models.DashboardData
+// @Failure      500  {object}  map[string]string
+// @Router       /dashboard [get]
+func (c ProblemsController) GetDashboard(ctx *gin.Context) {
+	userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
+
+	data, err := c.problemsService.GetDashboard(ctx, userID)
+	if err != nil {
+		c.logger.Error("failed to get dashboard data", zap.Error(err))
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "An internal server error has occurred.",
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
 }
 
 // getAllProblemSubmissions godoc

@@ -1,19 +1,36 @@
 package utils
 
 import (
+	"time"
+
 	"leetcode-spaced-repetition/models"
 
 	fsrs "github.com/open-spaced-repetition/go-fsrs/v3"
 )
 
-func toCard(state models.CardState) fsrs.Card {
+func stateToFSRS(s models.ProblemCardStateStatus) fsrs.State {
+	switch s {
+	case models.ProblemCardStateLearning:
+		return fsrs.Learning
+	case models.ProblemCardStateReview:
+		return fsrs.Review
+	case models.ProblemCardStateRelearning:
+		return fsrs.Relearning
+	default:
+		return fsrs.New
+	}
+}
+
+func toCard(state models.ProblemCardState) fsrs.Card {
 	return fsrs.Card{
+		Due:           state.Due,
 		Stability:     state.Stability,
 		Difficulty:    state.Difficulty,
 		ElapsedDays:   state.ElapsedDays,
 		ScheduledDays: state.ScheduledDays,
 		Reps:          state.Reps,
 		Lapses:        state.Lapses,
+		State:         stateToFSRS(state.State),
 		LastReview:    state.LastReview,
 	}
 }
@@ -33,40 +50,35 @@ func toRating(confidenceLevel models.ConfidenceLevel) fsrs.Rating {
 	}
 }
 
-// func ApplyReview(
-// 	cardState *models.CardState,
-// 	confidenceLevel models.ConfidenceLevel,
-// 	now time.Time,
-// ) (models.CardState, time.Time) {
-// 	var card fsrs.Card
-// 	if cardState == nil {
-// 		card = fsrs.NewCard()
-// 	} else {
-// 		card = toCard(*cardState)
-// 	}
+// ApplyReview computes the updated FSRS state after a review.
+// Pass nil for cardState when recording the first-ever submission for a problem.
+// The caller is responsible for setting ID, ProblemID, and UserID on the returned state.
+func ApplyReview(
+	cardState *models.ProblemCardState,
+	confidenceLevel models.ConfidenceLevel,
+	now time.Time,
+) models.ProblemCardState {
+	var card fsrs.Card
+	if cardState == nil {
+		card = fsrs.NewCard()
+	} else {
+		card = toCard(*cardState)
+	}
 
-// 	defaultParams := fsrs.DefaultParam()
-// 	defaultParams.EnableShortTerm = false
-// 	scheduler := defaultParams.NewLongTermScheduler(card, now)
-// 	// scheduler.Review()
+	params := fsrs.DefaultParam()
+	params.EnableShortTerm = false
+	scheduler := params.NewLongTermScheduler(card, now)
+	result := scheduler.Review(toRating(confidenceLevel))
 
-// 	// 3. Apply the review
-// 	result := scheduler.Review(toRating(confidenceLevel))
-
-// 	// 4. Convert result back into your DB model
-// 	updatedState := FSRSState{
-// 		Stability:     result.Card.Stability,
-// 		Difficulty:    result.Card.Difficulty,
-// 		ElapsedDays:   result.Card.ElapsedDays,
-// 		ScheduledDays: result.Card.ScheduledDays,
-// 		Reps:          result.Card.Reps,
-// 		Lapses:        result.Card.Lapses,
-// 		LastReview:    now,
-// 		NextReview:    nextReview,
-// 	}
-
-// 	// 5. Compute next review timestamp
-// 	nextReview := now.AddDate(0, 0, result.Card.ScheduledDays)
-
-// 	return updatedState, nextReview
-// }
+	return models.ProblemCardState{
+		Due:           result.Card.Due,
+		State:         models.ProblemCardStateStatusFromFSRS(result.Card.State),
+		Stability:     result.Card.Stability,
+		Difficulty:    result.Card.Difficulty,
+		ElapsedDays:   result.Card.ElapsedDays,
+		ScheduledDays: result.Card.ScheduledDays,
+		Reps:          result.Card.Reps,
+		Lapses:        result.Card.Lapses,
+		LastReview:    now,
+	}
+}

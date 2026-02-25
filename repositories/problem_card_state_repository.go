@@ -19,4 +19,12 @@ type ProblemCardStateRepository interface {
 
 	// GetProblemCardStatesDueForReview returns cards whose due date is on or before asOf.
 	GetProblemCardStatesDueForReview(ctx context.Context, userID uuid.UUID, asOf time.Time, limit int) ([]models.ProblemCardState, error)
+
+	// GetDueReviewItems returns problems whose card state is due on or before asOf,
+	// enriched with problem metadata, ordered by due ASC.
+	GetDueReviewItems(ctx context.Context, userID uuid.UUID, asOf time.Time, limit int) ([]models.ProblemReviewItem, error)
+
+	// GetLowestStabilityItems returns problems with the lowest FSRS stability values,
+	// enriched with problem metadata, ordered by stability ASC.
+	GetLowestStabilityItems(ctx context.Context, userID uuid.UUID, limit int) ([]models.ProblemReviewItem, error)
 }

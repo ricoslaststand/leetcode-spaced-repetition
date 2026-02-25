@@ -4,12 +4,37 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	fsrs "github.com/open-spaced-repetition/go-fsrs/v3"
 )
 
-type CardState struct {
+type ProblemCardStateStatus string
+
+const (
+	ProblemCardStateNew        ProblemCardStateStatus = "new"
+	ProblemCardStateLearning   ProblemCardStateStatus = "learning"
+	ProblemCardStateReview     ProblemCardStateStatus = "review"
+	ProblemCardStateRelearning ProblemCardStateStatus = "relearning"
+)
+
+func ProblemCardStateStatusFromFSRS(s fsrs.State) ProblemCardStateStatus {
+	switch s {
+	case fsrs.Learning:
+		return ProblemCardStateLearning
+	case fsrs.Review:
+		return ProblemCardStateReview
+	case fsrs.Relearning:
+		return ProblemCardStateRelearning
+	default:
+		return ProblemCardStateNew
+	}
+}
+
+type ProblemCardState struct {
 	ID            uuid.UUID
 	ProblemID     int
 	UserID        uuid.UUID
+	Due           time.Time              // computed next review date
+	State         ProblemCardStateStatus // new | learning | review | relearning
 	Stability     float64
 	Difficulty    float64
 	ElapsedDays   uint64
