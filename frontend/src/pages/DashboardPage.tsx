@@ -7,6 +7,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import ProblemDifficultyTag from "../components/ProblemDifficultyTag"
 import { useDashboard } from "../hooks/api"
 import { generateLinkForLeetcode } from "../lib/leetcodeUtils"
@@ -54,93 +55,96 @@ const DashboardPage = () => {
     const { data, isLoading } = useDashboard(DASHBOARD_TABLE_LIMIT)
 
     return (
-        <div className="space-y-10">
+        <div className="space-y-6">
             <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
-            <section>
-                <div className="flex items-center gap-2 mb-3">
-                    <h2 className="text-lg font-medium">Due for Review</h2>
-                    {!isLoading && (data?.overdueCount ?? 0) > 0 && (
-                        <span className="text-sm text-muted-foreground">
-                            ({data!.overdueCount} total)
-                        </span>
-                    )}
-                </div>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-24">#</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Difficulty</TableHead>
-                            <TableHead>Due</TableHead>
-                            <TableHead>Submissions</TableHead>
-                            <TableHead>LeetCode</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                                    Loading...
-                                </TableCell>
-                            </TableRow>
-                        ) : (data?.due ?? []).length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                                    No problems due for review.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            (data?.due ?? []).map(item => (
-                                <ProblemTableRow
-                                    key={item.problemId}
-                                    item={item}
-                                    extraCell={formatDueDate(item.due)}
-                                />
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </section>
+            <Tabs defaultValue="due">
+                <TabsList>
+                    <TabsTrigger value="due">Due for Review</TabsTrigger>
+                    <TabsTrigger value="risk">Most at Risk of Forgetting</TabsTrigger>
+                </TabsList>
 
-            <section>
-                <h2 className="text-lg font-medium mb-3">Most at Risk of Forgetting</h2>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-24">#</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Difficulty</TableHead>
-                            <TableHead>Stability</TableHead>
-                            <TableHead>Submissions</TableHead>
-                            <TableHead>LeetCode</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
+                <TabsContent value="due">
+                    {!isLoading && (data?.overdueCount ?? 0) > 0 && (
+                        <p className="text-sm text-muted-foreground mb-3">
+                            {data!.overdueCount} total overdue
+                        </p>
+                    )}
+                    <Table>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                                    Loading...
-                                </TableCell>
+                                <TableHead className="w-24">#</TableHead>
+                                <TableHead>Title</TableHead>
+                                <TableHead>Difficulty</TableHead>
+                                <TableHead>Due</TableHead>
+                                <TableHead>Submissions</TableHead>
+                                <TableHead>LeetCode</TableHead>
                             </TableRow>
-                        ) : (data?.lowStability ?? []).length === 0 ? (
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                        Loading...
+                                    </TableCell>
+                                </TableRow>
+                            ) : (data?.due ?? []).length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                        No problems due for review.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                (data?.due ?? []).map(item => (
+                                    <ProblemTableRow
+                                        key={item.problemId}
+                                        item={item}
+                                        extraCell={formatDueDate(item.due)}
+                                    />
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </TabsContent>
+
+                <TabsContent value="risk">
+                    <Table>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                                    No reviewed problems yet.
-                                </TableCell>
+                                <TableHead className="w-24">#</TableHead>
+                                <TableHead>Title</TableHead>
+                                <TableHead>Difficulty</TableHead>
+                                <TableHead>Stability</TableHead>
+                                <TableHead>Submissions</TableHead>
+                                <TableHead>LeetCode</TableHead>
                             </TableRow>
-                        ) : (
-                            (data?.lowStability ?? []).map(item => (
-                                <ProblemTableRow
-                                    key={item.problemId}
-                                    item={item}
-                                    extraCell={item.stability.toFixed(2)}
-                                />
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </section>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                        Loading...
+                                    </TableCell>
+                                </TableRow>
+                            ) : (data?.lowStability ?? []).length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                        No reviewed problems yet.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                (data?.lowStability ?? []).map(item => (
+                                    <ProblemTableRow
+                                        key={item.problemId}
+                                        item={item}
+                                        extraCell={item.stability.toFixed(2)}
+                                    />
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </TabsContent>
+            </Tabs>
         </div>
     )
 }
