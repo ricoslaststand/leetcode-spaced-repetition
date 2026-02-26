@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"leetcode-spaced-repetition/internal/utils"
-	"leetcode-spaced-repetition/models"
-	"leetcode-spaced-repetition/repositories"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"leetcode-spaced-repetition/internal/utils"
+	"leetcode-spaced-repetition/models"
+	"leetcode-spaced-repetition/repositories"
 
 	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
@@ -31,7 +32,7 @@ func NewProblemsService(problemsRepo repositories.ProblemRepository, cardStateRe
 	}
 }
 
-func (s ProblemService) GetProblems(ctx context.Context, topics []string, difficulties []string, page int, limit int) ([]models.Problem, error) {
+func (s ProblemService) GetProblems(ctx context.Context, topics, difficulties []string, page, limit int) ([]models.Problem, error) {
 	problems, err := s.problemRepo.GetProblems(ctx, topics, difficulties, page, limit)
 	if err != nil {
 		s.logger.Error("failed to get problems", zap.Error(err))
@@ -39,10 +40,10 @@ func (s ProblemService) GetProblems(ctx context.Context, topics []string, diffic
 	return problems, err
 }
 
-func (s ProblemService) GetProblemByID(c context.Context, ID int) (*models.Problem, error) {
-	problem, err := s.problemRepo.GetProblemByID(c, ID)
+func (s ProblemService) GetProblemByID(c context.Context, id int) (*models.Problem, error) {
+	problem, err := s.problemRepo.GetProblemByID(c, id)
 	if err != nil {
-		s.logger.Error("failed to get problem by ID", zap.Int("problemID", ID), zap.Error(err))
+		s.logger.Error("failed to get problem by ID", zap.Int("problemID", id), zap.Error(err))
 	}
 	return problem, err
 }
@@ -63,10 +64,10 @@ func (s ProblemService) GetAllProblemTopics(c context.Context) ([]string, error)
 	return topics, err
 }
 
-func (s ProblemService) GetTopicsForProblem(c context.Context, ID int) ([]string, error) {
-	topics, err := s.problemRepo.GetTopicsForProblem(c, ID)
+func (s ProblemService) GetTopicsForProblem(c context.Context, id int) ([]string, error) {
+	topics, err := s.problemRepo.GetTopicsForProblem(c, id)
 	if err != nil {
-		s.logger.Error("failed to get topics for problem", zap.Int("problemID", ID), zap.Error(err))
+		s.logger.Error("failed to get topics for problem", zap.Int("problemID", id), zap.Error(err))
 	}
 	return topics, err
 }
@@ -123,11 +124,11 @@ func (s ProblemService) GetAllSubmissionsForProblem(c context.Context, problemID
 
 // parsedSubmissionRow holds a successfully parsed Excel row before any DB work.
 type parsedSubmissionRow struct {
-	rowNumber       int
-	problemID       int
 	submissionDate  time.Time
 	timeTaken       *time.Duration
 	confidenceLevel models.ConfidenceLevel
+	rowNumber       int
+	problemID       int
 }
 
 func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (models.ImportSubmissionsResult, error) {
@@ -139,7 +140,7 @@ func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (mod
 	if err != nil {
 		return result, fmt.Errorf("failed to parse excel file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	sheetName := f.GetSheetName(0)
 	rows, err := f.GetRows(sheetName)
@@ -211,8 +212,8 @@ func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (mod
 		var timeTaken *time.Duration
 		timeTakenStr := strings.ReplaceAll(strings.TrimSpace(row[2]), " ", "")
 		if timeTakenStr != "" {
-			d, err := time.ParseDuration(timeTakenStr)
-			if err != nil {
+			d, parseErr := time.ParseDuration(timeTakenStr)
+			if parseErr != nil {
 				result.Errors = append(result.Errors, models.ImportSubmissionRowError{
 					Row:    rowNumber,
 					Reason: fmt.Sprintf("%q is not a valid time duration", timeTakenStr),
@@ -287,7 +288,7 @@ func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (mod
 		newState.ProblemID = row.problemID
 		newState.UserID = userID
 
-		if err := s.cardStateRepo.UpsertProblemCardState(ctx, newState); err != nil {
+		if err := s.cardStateRepo.UpsertProblemCardState(ctx, &newState); err != nil {
 			s.logger.Error("failed to upsert card state",
 				zap.Int("row", row.rowNumber),
 				zap.Int("problemID", row.problemID),
@@ -328,7 +329,7 @@ func (s ProblemService) SaveProblemSubmission(
 	newState.ProblemID = problemID
 	newState.UserID = userID
 
-	if err := s.cardStateRepo.UpsertProblemCardState(c, newState); err != nil {
+	if err := s.cardStateRepo.UpsertProblemCardState(c, &newState); err != nil {
 		s.logger.Error("failed to upsert card state", zap.Int("problemID", problemID), zap.Error(err))
 	}
 

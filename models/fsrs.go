@@ -30,16 +30,16 @@ func ProblemCardStateStatusFromFSRS(s fsrs.State) ProblemCardStateStatus {
 }
 
 type ProblemCardState struct {
-	ID            uuid.UUID
+	Due           time.Time
+	LastReview    time.Time
+	State         ProblemCardStateStatus
 	ProblemID     int
-	UserID        uuid.UUID
-	Due           time.Time              // computed next review date
-	State         ProblemCardStateStatus // new | learning | review | relearning
 	Stability     float64
 	Difficulty    float64
 	ElapsedDays   uint64
 	ScheduledDays uint64
 	Reps          uint64
 	Lapses        uint64
-	LastReview    time.Time
+	ID            uuid.UUID
+	UserID        uuid.UUID
 }

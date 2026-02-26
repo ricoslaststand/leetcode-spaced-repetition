@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
+
 	"leetcode-spaced-repetition/internal"
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/repositories"
-	"os"
-	"strconv"
 
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
@@ -19,37 +20,37 @@ type Difficulty struct {
 }
 
 type Stat struct {
-	QuestionID              int     `json:"question_id"`
 	QuestionArticleLive     *bool   `json:"question__article__live"`
 	QuestionArticleSlug     *string `json:"question__article__slug"`
 	QuestionArticleHasVideo *bool   `json:"question__article__has_video_solution"`
 	QuestionTitle           string  `json:"question__title"`
 	QuestionTitleSlug       string  `json:"question__title_slug"`
-	QuestionHide            bool    `json:"question__hide"`
+	QuestionID              int     `json:"question_id"`
 	TotalACs                int     `json:"total_acs"`
 	TotalSubmitted          int     `json:"total_submitted"`
 	FrontendQuestionID      int     `json:"frontend_question_id"`
+	QuestionHide            bool    `json:"question__hide"`
 	IsNewQuestion           bool    `json:"is_new_question"`
 }
 
 type StatStatusPair struct {
+	Status     *string    `json:"status"`
 	Stat       Stat       `json:"stat"`
-	Status     *string    `json:"status"` // Could be null (use *string for nullable field)
 	Difficulty Difficulty `json:"difficulty"`
-	PaidOnly   bool       `json:"paid_only"`
-	IsFavor    bool       `json:"is_favor"`
 	Frequency  int        `json:"frequency"`
 	Progress   int        `json:"progress"`
+	PaidOnly   bool       `json:"paid_only"`
+	IsFavor    bool       `json:"is_favor"`
 }
 
 type ProblemData struct {
 	UserName        string           `json:"user_name"`
+	StatStatusPairs []StatStatusPair `json:"stat_status_pairs"`
 	NumSolved       int              `json:"num_solved"`
 	NumTotal        int              `json:"num_total"`
 	AcEasy          int              `json:"ac_easy"`
 	AcMedium        int              `json:"ac_medium"`
 	AcHard          int              `json:"ac_hard"`
-	StatStatusPairs []StatStatusPair `json:"stat_status_pairs"`
 }
 
 type MergedProblems struct {
@@ -66,13 +67,13 @@ func main() {
 	}
 
 	logger := internal.NewLogger(cfg.AppEnv)
-	defer logger.Sync() //nolint:errcheck
+	defer logger.Sync() //nolint:errcheck // logger.Sync error is not actionable at shutdown
 
-	db, err := internal.GetDBConnFromConfig(cfg)
+	db, err := internal.GetDBConnFromConfig(&cfg)
 	if err != nil {
 		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	logger.Info("loading leetcode problems")
 

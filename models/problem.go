@@ -52,68 +52,68 @@ const (
 
 type (
 	Problem struct {
-		ID          int               `json:"id"`
-		Topics      []string          `json:"topics"`
 		Title       string            `json:"title"`
 		Slug        string            `json:"slug"`
 		Description string            `json:"description"`
 		Difficulty  ProblemDifficulty `json:"difficulty"`
+		Topics      []string          `json:"topics"`
+		ID          int               `json:"id"`
 	}
 
 	ProblemTopic struct {
+		Topic     string `json:"topic"`
 		ID        int    `json:"id"`
 		ProblemID int    `json:"problemId"`
-		Topic     string `json:"topic"`
 	}
 
 	ProblemSubmission struct {
-		ID              uuid.UUID          `json:"id"`
-		ProblemID       int                `json:"problemId"`
-		Date            time.Time          `json:"date"`
-		TimeTaken       *uint              `json:"timeTaken"`
-		ConfidenceLevel ConfidenceLevel    `json:"confidenceLevel"`
+		Date            time.Time           `json:"date"`
+		TimeTaken       *uint               `json:"timeTaken"`
 		Language        *SubmissionLanguage `json:"language"`
+		ConfidenceLevel ConfidenceLevel     `json:"confidenceLevel"`
+		ProblemID       int                 `json:"problemId"`
+		ID              uuid.UUID           `json:"id"`
 	}
 
 	ProblemSubmissionWithDetails struct {
-		ID              uuid.UUID       `json:"id"`
 		SubmittedAt     time.Time       `json:"submittedAt"`
 		TimeTaken       *uint           `json:"timeTaken"`
 		ConfidenceLevel ConfidenceLevel `json:"confidenceLevel"`
 		Problem         struct {
-			ID          int               `json:"id"`
 			Title       string            `json:"title"`
 			Description string            `json:"description"`
 			Difficulty  ProblemDifficulty `json:"difficulty"`
+			ID          int               `json:"id"`
 		} `json:"problem"`
+		ID uuid.UUID `json:"id"`
 	}
 
 	ProblemSubmissionUserStats struct {
-		ID               uuid.UUID     `json:"id"`
+		NextReviewDate   time.Time     `json:"nextReviewDate"`
 		ProblemID        int           `json:"problemID"`
-		UserID           uuid.UUID     `json:"userID"`
 		NumOfSubmissions uint          `json:"numOfSubmissions"`
 		AvgDuration      time.Duration `json:"avgDuration"`
-		NextReviewDate   time.Time     `json:"nextReviewDate"`
+		ID               uuid.UUID     `json:"id"`
+		UserID           uuid.UUID     `json:"userID"`
 	}
 
 	ProblemCard struct {
-		ProblemID uuid.UUID `json:"problemID"`
 		Card      fsrs.Card `json:"card"`
+		ProblemID uuid.UUID `json:"problemID"`
 	}
 )
 
 type ProblemDetail struct {
-	Problem
 	Stability *float64 `json:"stability"`
+	Problem
 }
 
 type ProblemReviewItem struct {
-	ProblemID  int               `json:"problemId"`
+	Due        time.Time         `json:"due"`
 	Title      string            `json:"title"`
 	Slug       string            `json:"slug"`
 	Difficulty ProblemDifficulty `json:"difficulty"`
-	Due        time.Time         `json:"due"`
+	ProblemID  int               `json:"problemId"`
 	Stability  float64           `json:"stability"`
 }
 
@@ -124,14 +124,14 @@ type DashboardData struct {
 }
 
 type ImportSubmissionRowError struct {
-	Row    int    `json:"row"`
 	Reason string `json:"reason"`
+	Row    int    `json:"row"`
 }
 
 type ImportSubmissionsResult struct {
+	Errors   []ImportSubmissionRowError `json:"errors"`
 	Imported int                        `json:"imported"`
 	Skipped  int                        `json:"skipped"`
-	Errors   []ImportSubmissionRowError `json:"errors"`
 }
 
 func DetermineConfidenceLevelFromString(valStr string) (ConfidenceLevel, error) {

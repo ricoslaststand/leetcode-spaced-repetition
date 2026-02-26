@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+
 	"leetcode-spaced-repetition/repositories"
 
 	"go.uber.org/zap"
@@ -13,16 +14,11 @@ type AuthService struct {
 	logger         *zap.Logger
 }
 
-type newUser struct {
-	email    string `validate:"email"`
-	password string `v`
-}
-
 func NewAuthService(logger *zap.Logger) *AuthService {
 	return &AuthService{logger: logger}
 }
 
-func (a AuthService) Login(ctx context.Context, email string, password string) (bool, error) {
+func (a AuthService) Login(ctx context.Context, email, password string) (bool, error) {
 	passwordHash, err := a.userRepository.GetPasswordHashByEmail(ctx, email)
 	if err != nil {
 		a.logger.Error("failed to get password hash during login", zap.String("email", email), zap.Error(err))
@@ -41,7 +37,7 @@ func (a AuthService) Logout() {
 
 }
 
-func (a AuthService) RegisterUser(ctx context.Context, email string, password string) error {
+func (a AuthService) RegisterUser(ctx context.Context, email, password string) error {
 	hash, err := a.hashAndSaltPassword(password)
 	if err != nil {
 		a.logger.Error("failed to hash password during registration", zap.String("email", email), zap.Error(err))

@@ -9,7 +9,7 @@ import (
 
 func TestGetProblems_Empty(t *testing.T) {
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -31,12 +31,12 @@ func TestGetProblems_Empty(t *testing.T) {
 }
 
 func TestGetProblems_WithData(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 	insertTestTopic(t, testProblem.ID, "array")
 
 	// GetProblems always filters by topics, so a topics param is required to get results.
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems?topics=array", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems?topics=array", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -55,10 +55,10 @@ func TestGetProblems_WithData(t *testing.T) {
 }
 
 func TestGetProblemByID_Found(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems/1", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems/1", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -77,7 +77,7 @@ func TestGetProblemByID_Found(t *testing.T) {
 
 func TestGetProblemByID_NotFound(t *testing.T) {
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems/9999", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems/9999", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusNotFound {
@@ -87,7 +87,7 @@ func TestGetProblemByID_NotFound(t *testing.T) {
 
 func TestGetProblemByID_InvalidID(t *testing.T) {
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems/abc", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems/abc", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
@@ -97,7 +97,7 @@ func TestGetProblemByID_InvalidID(t *testing.T) {
 
 func TestGetAllProblemTopics_Empty(t *testing.T) {
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems/topics", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems/topics", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -115,12 +115,12 @@ func TestGetAllProblemTopics_Empty(t *testing.T) {
 }
 
 func TestGetProblemByID_WithTopics(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 	insertTestTopic(t, testProblem.ID, "array")
 	insertTestTopic(t, testProblem.ID, "hash-table")
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems/1", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems/1", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {

@@ -7,7 +7,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func GetDBConnFromConfig(config Config) (*sql.DB, error) {
+func GetDBConnFromConfig(config *Config) (*sql.DB, error) {
 	// TODO: Make this configurable for host and port
 	connStr := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",

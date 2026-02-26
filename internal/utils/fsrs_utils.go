@@ -21,7 +21,7 @@ func stateToFSRS(s models.ProblemCardStateStatus) fsrs.State {
 	}
 }
 
-func toCard(state models.ProblemCardState) fsrs.Card {
+func toCard(state *models.ProblemCardState) fsrs.Card {
 	return fsrs.Card{
 		Due:           state.Due,
 		Stability:     state.Stability,
@@ -62,7 +62,7 @@ func ApplyReview(
 	if cardState == nil {
 		card = fsrs.NewCard()
 	} else {
-		card = toCard(*cardState)
+		card = toCard(cardState)
 	}
 
 	params := fsrs.DefaultParam()

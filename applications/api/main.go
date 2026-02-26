@@ -7,9 +7,9 @@ package main
 
 import (
 	"fmt"
+
 	"leetcode-spaced-repetition/controllers"
 	"leetcode-spaced-repetition/internal"
-	config "leetcode-spaced-repetition/internal"
 	"leetcode-spaced-repetition/repositories"
 	"leetcode-spaced-repetition/services"
 
@@ -25,19 +25,19 @@ import (
 )
 
 func main() {
-	config, err := config.GetConfig()
+	cfg, err := internal.GetConfig()
 	if err != nil {
 		panic("failed to load config")
 	}
 
-	logger := internal.NewLogger(config.AppEnv)
-	defer logger.Sync() //nolint:errcheck
+	logger := internal.NewLogger(cfg.AppEnv)
+	defer logger.Sync() //nolint:errcheck // logger.Sync error is not actionable at shutdown
 
-	db, err := internal.GetDBConnFromConfig(config)
+	db, err := internal.GetDBConnFromConfig(&cfg)
 	if err != nil {
 		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err = db.Ping(); err != nil {
 		logger.Error("failed to ping database", zap.Error(err))

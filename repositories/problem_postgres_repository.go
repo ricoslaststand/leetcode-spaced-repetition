@@ -81,7 +81,7 @@ func (r ProblemPostgresRepository) GetAllProblemsPastReviewDate(c context.Contex
 	return problems, nil
 }
 
-func (r ProblemPostgresRepository) GetProblems(ctx context.Context, topics []string, difficulties []string, page, limit int) ([]models.Problem, error) {
+func (r ProblemPostgresRepository) GetProblems(ctx context.Context, topics, difficulties []string, page, limit int) ([]models.Problem, error) {
 	var problems []models.Problem
 
 	query := `SELECT id, title, slug, difficulty FROM problems`

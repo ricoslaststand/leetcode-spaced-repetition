@@ -1,9 +1,10 @@
 package controllers
 
 import (
+	"net/http"
+
 	"leetcode-spaced-repetition/internal/utils"
 	"leetcode-spaced-repetition/services"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -15,8 +16,8 @@ type AuthController struct {
 }
 
 type loginRequestBody struct {
-	email    string `json:"email" binding:"required" validation:"email"`
-	password string `json:"password" binding:"required"`
+	Email    string `json:"email" binding:"required" validation:"email"`
+	Password string `json:"password" binding:"required"`
 }
 
 func NewAuthController(authService services.AuthService, logger *zap.Logger) *AuthController {
@@ -46,7 +47,7 @@ func (c AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	isValid, err := c.authService.Login(ctx, body.email, body.password)
+	isValid, err := c.authService.Login(ctx, body.Email, body.Password)
 	if err != nil {
 		c.logger.Error("login failed", zap.Error(err))
 		utils.FormatErrorBody(ctx, http.StatusInternalServerError, "An internal server error occurred.")

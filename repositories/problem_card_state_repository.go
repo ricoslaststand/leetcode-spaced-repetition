@@ -11,7 +11,7 @@ import (
 
 type ProblemCardStateRepository interface {
 	// UpsertProblemCardState inserts or updates the FSRS state for a (user, problem) pair.
-	UpsertProblemCardState(ctx context.Context, state models.ProblemCardState) error
+	UpsertProblemCardState(ctx context.Context, state *models.ProblemCardState) error
 
 	// GetProblemCardStateByProblemID returns the current FSRS state for a (user, problem) pair,
 	// or nil if no state has been recorded yet.

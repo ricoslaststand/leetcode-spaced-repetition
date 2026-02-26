@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
-	"leetcode-spaced-repetition/internal"
-	"leetcode-spaced-repetition/models"
-	"leetcode-spaced-repetition/repositories"
-	"leetcode-spaced-repetition/services"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"leetcode-spaced-repetition/internal"
+	"leetcode-spaced-repetition/models"
+	"leetcode-spaced-repetition/repositories"
+	"leetcode-spaced-repetition/services"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -27,10 +28,10 @@ const (
 const dateFormat string = "2006-01-02"
 
 type recordSubmission struct {
-	problemNumber   int
-	timeTaken       *time.Duration
 	submissionDate  time.Time
+	timeTaken       *time.Duration
 	confidenceLevel models.ConfidenceLevel
+	problemNumber   int
 }
 
 func main() {
@@ -40,13 +41,13 @@ func main() {
 	}
 
 	logger := internal.NewLogger(cfg.AppEnv)
-	defer logger.Sync() //nolint:errcheck
+	defer logger.Sync() //nolint:errcheck // logger.Sync error is not actionable at shutdown
 
-	db, err := internal.GetDBConnFromConfig(cfg)
+	db, err := internal.GetDBConnFromConfig(&cfg)
 	if err != nil {
 		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	logger.Info("constructing domain layers")
 
@@ -58,7 +59,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to open CSV file", zap.Error(err))
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	logger.Info("reading leetcode submission file")
 
@@ -106,8 +107,8 @@ func validateProblemSubmission(r []string) (recordSubmission, error) {
 	var timeTakenDuration *time.Duration
 	formattedTimeTakenStr := strings.ReplaceAll(strings.TrimSpace(timeTaken), " ", "")
 	if formattedTimeTakenStr != "" {
-		d, err := time.ParseDuration(formattedTimeTakenStr)
-		if err != nil {
+		d, parseErr := time.ParseDuration(formattedTimeTakenStr)
+		if parseErr != nil {
 			return recordSubmission{}, fmt.Errorf("'%s' is not a valid time duration", formattedTimeTakenStr)
 		}
 		timeTakenDuration = &d

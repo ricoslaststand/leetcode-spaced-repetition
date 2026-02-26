@@ -1,9 +1,10 @@
 package internal
 
 import (
-	"leetcode-spaced-repetition/internal/utils"
 	"net/http"
 	"strings"
+
+	"leetcode-spaced-repetition/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -28,7 +29,12 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims := token.Claims.(jwt.MapClaims)
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			c.Abort()
+			return
+		}
 		c.Set("user", claims["username"])
 		c.Next()
 

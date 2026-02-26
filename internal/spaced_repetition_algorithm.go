@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"time"
@@ -61,23 +60,21 @@ func (c ComfortLevel) String() string {
 // ProblemAttempt represents a single attempt at solving a problem
 type ProblemAttempt struct {
 	Timestamp        time.Time
+	Notes            string
 	ComfortLevel     ComfortLevel
 	TimeTakenMinutes int
-	Notes            string
 }
 
 // LeetCodeProblem represents a LeetCode problem with spaced repetition data
 type LeetCodeProblem struct {
-	ProblemID  string
-	Title      string
-	Difficulty Difficulty
-	Attempts   []ProblemAttempt
-
-	// Spaced repetition parameters
-	EaseFactor      float64   // How easy the problem is for this user
-	IntervalDays    float64   // Current interval between reviews
-	RepetitionCount int       // Number of successful reviews
-	NextReviewDate  time.Time // When to review next
+	NextReviewDate  time.Time
+	ProblemID       string
+	Title           string
+	Attempts        []ProblemAttempt
+	Difficulty      Difficulty
+	EaseFactor      float64
+	IntervalDays    float64
+	RepetitionCount int
 }
 
 // NewLeetCodeProblem creates a new LeetCode problem
@@ -96,11 +93,11 @@ func NewLeetCodeProblem(problemID, title string, difficulty Difficulty) *LeetCod
 
 // ProblemStats contains statistics about a problem
 type ProblemStats struct {
-	TotalAttempts    int
-	LatestComfort    *ComfortLevel
-	AverageComfort   float64
-	ImprovementTrend *float64
 	NextReview       time.Time
+	LatestComfort    *ComfortLevel
+	ImprovementTrend *float64
+	TotalAttempts    int
+	AverageComfort   float64
 	CurrentInterval  float64
 	EaseFactor       float64
 	RepetitionCount  int
@@ -196,11 +193,12 @@ func (sr *LeetCodeSpacedRepetition) updateSpacedRepetitionParams(problem *LeetCo
 		// Successful attempt - increase repetition count
 		problem.RepetitionCount++
 
-		if problem.RepetitionCount == 1 {
+		switch problem.RepetitionCount {
+		case 1:
 			problem.IntervalDays = difficultyFactor
-		} else if problem.RepetitionCount == 2 {
+		case 2:
 			problem.IntervalDays = difficultyFactor * 2
-		} else {
+		default:
 			// Use modified SM-2 algorithm with our factors
 			problem.IntervalDays = problem.IntervalDays * problem.EaseFactor * historicalFactor * recentFactor
 		}
@@ -232,7 +230,7 @@ func (sr *LeetCodeSpacedRepetition) calculateHistoricalFactor(problem *LeetCodeP
 	totalWeight := 0.0
 
 	for i, attempt := range recentAttempts {
-		weight := weights[0]
+		var weight float64
 		if i < len(weights) {
 			weight = weights[i]
 		} else {
@@ -343,66 +341,4 @@ func (sr *LeetCodeSpacedRepetition) GetStudyPlan(maxProblems int) []*LeetCodePro
 		return dueProblems[:maxProblems]
 	}
 	return dueProblems
-}
-
-// demoUsage demonstrates how to use the spaced repetition system
-func demoUsage() {
-	sr := NewLeetCodeSpacedRepetition()
-
-	// Add some problems
-	sr.AddProblem("1", "Two Sum", Easy)
-	sr.AddProblem("15", "3Sum", Medium)
-	sr.AddProblem("4", "Median of Two Sorted Arrays", Hard)
-
-	// Record some attempts
-	err := sr.RecordAttempt("1", Comfortable, 5, "Got it quickly")
-	if err != nil {
-		log.Printf("Error recording attempt: %v", err)
-	}
-
-	err = sr.RecordAttempt("15", Difficult, 45, "Needed hints for optimization")
-	if err != nil {
-		log.Printf("Error recording attempt: %v", err)
-	}
-
-	err = sr.RecordAttempt("4", Struggled, 60, "Couldn't solve without looking at solution")
-	if err != nil {
-		log.Printf("Error recording attempt: %v", err)
-	}
-
-	// Get study recommendations
-	studyPlan := sr.GetStudyPlan(5)
-	fmt.Println("Today's study plan:")
-	for _, problem := range studyPlan {
-		fmt.Printf("- %s (%s) - Next review: %s\n",
-			problem.Title,
-			problem.Difficulty.String(),
-			problem.NextReviewDate.Format("2006-01-02 15:04"))
-	}
-
-	// Show problem statistics
-	fmt.Println("\nProblem Statistics:")
-	for problemID := range sr.problems {
-		stats, err := sr.GetProblemStats(problemID)
-		if err != nil {
-			log.Printf("Error getting stats for %s: %v", problemID, err)
-			continue
-		}
-
-		problem := sr.problems[problemID]
-		latestComfortStr := "None"
-		if stats.LatestComfort != nil {
-			latestComfortStr = stats.LatestComfort.String()
-		}
-
-		fmt.Printf("%s: %d attempts, Latest comfort: %s, Next review in %.1f days\n",
-			problem.Title,
-			stats.TotalAttempts,
-			latestComfortStr,
-			stats.CurrentInterval)
-	}
-}
-
-func main() {
-	demoUsage()
 }

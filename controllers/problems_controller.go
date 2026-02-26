@@ -1,12 +1,13 @@
 package controllers
 
 import (
-	"leetcode-spaced-repetition/models"
-	"leetcode-spaced-repetition/services"
 	"net/http"
 	"regexp"
 	"strconv"
 	"time"
+
+	"leetcode-spaced-repetition/models"
+	"leetcode-spaced-repetition/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -26,10 +27,10 @@ type getProblemSubmissionsRequest struct {
 }
 
 type saveProblemSubmissionRequest struct {
-	ProblemID       int     `json:"problemId" binding:"required,number" validate:"gte=1"`
 	TimeTaken       *int    `json:"timeTaken"`
-	ConfidenceLevel string  `json:"confidenceLevel" binding:"required"`
 	Language        *string `json:"language"`
+	ConfidenceLevel string  `json:"confidenceLevel" binding:"required"`
+	ProblemID       int     `json:"problemId" binding:"required,number" validate:"gte=1"`
 }
 
 var validDate validator.Func = func(fl validator.FieldLevel) bool {
@@ -49,7 +50,9 @@ type ProblemsController struct {
 
 func RegisterRoutes(r *gin.Engine, problemsService *services.ProblemService, logger *zap.Logger) {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("date", validDate)
+		if err := v.RegisterValidation("date", validDate); err != nil {
+			panic("failed to register date validator: " + err.Error())
+		}
 	}
 
 	problemsController := ProblemsController{problemsService: *problemsService, logger: logger}
@@ -313,7 +316,7 @@ func (c ProblemsController) ImportSubmissions(ctx *gin.Context) {
 		})
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	result, err := c.problemsService.ImportSubmissions(ctx, f)
 	if err != nil {

@@ -25,7 +25,7 @@ func NewProblemCardStatePostgresRepository(db *sql.DB, logger *zap.Logger) *Prob
 }
 
 // UpsertProblemCardState implements ProblemCardStateRepository.
-func (r *ProblemCardStatePostgresRepository) UpsertProblemCardState(ctx context.Context, state models.ProblemCardState) error {
+func (r *ProblemCardStatePostgresRepository) UpsertProblemCardState(ctx context.Context, state *models.ProblemCardState) error {
 	_, err := r.db.ExecContext(
 		ctx,
 		`INSERT INTO problem_card_states
@@ -132,7 +132,7 @@ func (r *ProblemCardStatePostgresRepository) GetProblemCardStatesDueForReview(ct
 		)
 		return states, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var state models.ProblemCardState
@@ -187,7 +187,7 @@ func (r *ProblemCardStatePostgresRepository) GetDueReviewItems(ctx context.Conte
 		)
 		return items, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var item models.ProblemReviewItem
@@ -225,7 +225,7 @@ func (r *ProblemCardStatePostgresRepository) GetLowestStabilityItems(ctx context
 		)
 		return items, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var item models.ProblemReviewItem

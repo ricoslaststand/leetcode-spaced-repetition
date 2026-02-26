@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+
 	"leetcode-spaced-repetition/db/migrations"
 	"leetcode-spaced-repetition/internal"
 
@@ -17,11 +18,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	db, err := internal.GetDBConnFromConfig(config)
+	db, err := internal.GetDBConnFromConfig(&config)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := goose.SetDialect("postgres"); err != nil {
 		panic(err)

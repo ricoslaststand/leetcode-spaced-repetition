@@ -8,15 +8,15 @@ import (
 )
 
 type Config struct {
-	Debug      bool
-	AppPort    uint   `envconfig:"APP_PORT"`
-	AppEnv     string `envconfig:"APP_ENV"`
 	PostgresDB struct {
 		URL      string `envconfig:"POSTGRES_URL" required:"true"`
 		Username string `envconfig:"POSTGRES_USERNAME" required:"true"`
 		Password string `envconfig:"POSTGRES_PASSWORD" required:"true"`
 		DB       string `envconfig:"POSTGRES_DB" required:"true"`
 	}
+	AppEnv  string `envconfig:"APP_ENV"`
+	AppPort uint   `envconfig:"APP_PORT"`
+	Debug   bool
 }
 
 func GetConfig() (Config, error) {

@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to get connection string: %v\n", err)
-		os.Exit(1)
+		os.Exit(1) //nolint:gocritic // TestMain requires os.Exit; pgContainer.Terminate defer will not run but container is ephemeral
 	}
 
 	testDB, err = internal.GetDBConnFromDSN(connStr)
@@ -56,7 +56,7 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "failed to open DB: %v\n", err)
 		os.Exit(1)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	if err := goose.SetDialect("postgres"); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to set goose dialect: %v\n", err)
@@ -82,7 +82,7 @@ func TestMain(m *testing.M) {
 }
 
 // insertTestProblem seeds a problem row directly via SQL to satisfy FK constraints.
-func insertTestProblem(t *testing.T, p models.Problem) {
+func insertTestProblem(t *testing.T, p *models.Problem) {
 	t.Helper()
 	_, err := testDB.Exec(
 		`INSERT INTO problems (id, title, slug, description, difficulty)

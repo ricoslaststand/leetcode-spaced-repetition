@@ -12,7 +12,7 @@ import (
 )
 
 func TestSaveProblemSubmission_Valid(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 	clearSubmissions(t)
 
 	body := `{"problemId":1,"confidenceLevel":"good","timeTaken":90}`
@@ -53,7 +53,7 @@ func TestGetAllProblemSubmissions_Empty(t *testing.T) {
 	clearSubmissions(t)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems/submissions", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems/submissions", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -75,7 +75,7 @@ func TestGetAllProblemSubmissions_Empty(t *testing.T) {
 }
 
 func TestGetAllProblemSubmissions_WithData(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 	clearSubmissions(t)
 
 	// Save one submission via the API
@@ -85,7 +85,7 @@ func TestGetAllProblemSubmissions_WithData(t *testing.T) {
 	testRouter.ServeHTTP(httptest.NewRecorder(), saveReq)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems/submissions", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems/submissions", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -104,7 +104,7 @@ func TestGetAllProblemSubmissions_WithData(t *testing.T) {
 }
 
 func TestGetProblemSubmissions_ByID(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 	clearSubmissions(t)
 
 	body := `{"problemId":1,"confidenceLevel":"hard"}`
@@ -113,7 +113,7 @@ func TestGetProblemSubmissions_ByID(t *testing.T) {
 	testRouter.ServeHTTP(httptest.NewRecorder(), saveReq)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/problems/1/submissions", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/problems/1/submissions", http.NoBody)
 	testRouter.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -135,7 +135,7 @@ func TestGetProblemSubmissions_ByID(t *testing.T) {
 // date timezone bug: a submission with date "2025-06-15" must be stored as
 // "2025-06-15", not shifted to "2025-06-14" by timezone conversion.
 func TestImportSubmissions_DatePreservation(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 	clearSubmissions(t)
 
 	const wantDate = "2025-06-15"
@@ -155,7 +155,10 @@ func TestImportSubmissions_DatePreservation(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	imported := result["imported"].(float64)
+	imported, ok := result["imported"].(float64)
+	if !ok {
+		t.Fatalf("expected imported to be a number, got %T", result["imported"])
+	}
 	if imported != 1 {
 		t.Fatalf("expected 1 imported, got %v (errors: %v)", imported, result["errors"])
 	}
@@ -174,7 +177,7 @@ func TestImportSubmissions_DatePreservation(t *testing.T) {
 }
 
 func TestImportSubmissions_InvalidRow(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 	clearSubmissions(t)
 
 	// Confidence "99" is not a valid level.
@@ -203,7 +206,7 @@ func TestImportSubmissions_InvalidRow(t *testing.T) {
 
 func TestImportSubmissions_MissingFile(t *testing.T) {
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/problems/submissions/import", nil)
+	req, _ := http.NewRequest(http.MethodPost, "/problems/submissions/import", http.NoBody)
 	req.Header.Set("Content-Type", "multipart/form-data")
 	testRouter.ServeHTTP(w, req)
 
@@ -213,7 +216,7 @@ func TestImportSubmissions_MissingFile(t *testing.T) {
 }
 
 func TestImportSubmissions_ComputesCardState(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 	clearSubmissions(t)
 	clearCardStates(t)
 
@@ -233,7 +236,8 @@ func TestImportSubmissions_ComputesCardState(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	if result["imported"].(float64) != 1 {
+	importedVal, ok := result["imported"].(float64)
+	if !ok || importedVal != 1 {
 		t.Fatalf("expected 1 imported, got %v (errors: %v)", result["imported"], result["errors"])
 	}
 
@@ -247,7 +251,7 @@ func TestImportSubmissions_ComputesCardState(t *testing.T) {
 }
 
 func TestImportSubmissions_IdempotentCardState(t *testing.T) {
-	insertTestProblem(t, testProblem)
+	insertTestProblem(t, &testProblem)
 	clearSubmissions(t)
 	clearCardStates(t)
 
@@ -284,11 +288,11 @@ func multipartFileRequest(t *testing.T, url string, xlsxData []byte) *http.Reque
 	if err != nil {
 		t.Fatalf("multipartFileRequest: create form file: %v", err)
 	}
-	if _, err := part.Write(xlsxData); err != nil {
-		t.Fatalf("multipartFileRequest: write data: %v", err)
+	if _, writeErr := part.Write(xlsxData); writeErr != nil {
+		t.Fatalf("multipartFileRequest: write data: %v", writeErr)
 	}
-	if err := writer.Close(); err != nil {
-		t.Fatalf("multipartFileRequest: close writer: %v", err)
+	if closeErr := writer.Close(); closeErr != nil {
+		t.Fatalf("multipartFileRequest: close writer: %v", closeErr)
 	}
 
 	req, err := http.NewRequest(http.MethodPost, url, &body)
