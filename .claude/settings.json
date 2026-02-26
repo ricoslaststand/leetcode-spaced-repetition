@@ -1,12 +1,23 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/format-after-edit.sh"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "permission_prompt",
         "hooks": [
           {
             "type": "command",
-            "command": "osascript -e 'display notification \"Claude Code needs your input\" with title \"Claude Code\" sound name \"Ping\"'"
+            "command": ".claude/hooks/notify-permission-prompt.sh"
           }
         ]
       },
@@ -15,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "osascript -e 'display notification \"Task complete — ready for next instruction\" with title \"Claude Code\" sound name \"Glass\"'"
+            "command": ".claude/hooks/notify-idle-prompt.sh"
           }
         ]
       }
