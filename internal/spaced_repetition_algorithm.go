@@ -320,7 +320,7 @@ func (sr *LeetCodeSpacedRepetition) GetProblemStats(problemID string) (*ProblemS
 		earlySum := 0
 		recentSum := 0
 
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			earlySum += int(problem.Attempts[i].ComfortLevel)
 			recentSum += int(problem.Attempts[len(problem.Attempts)-3+i].ComfortLevel)
 		}

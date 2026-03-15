@@ -94,7 +94,7 @@ func main() {
 	problemRepo := repositories.NewProblemPostgresRepository(db, logger)
 
 	var problems []models.Problem
-	for i := 0; i < numOfProblems; i++ {
+	for i := range numOfProblems {
 		currProblem := responseData.StatStatusPairs[i]
 		difficultyMap := map[int]models.ProblemDifficulty{
 			1: models.EasyDifficulty,

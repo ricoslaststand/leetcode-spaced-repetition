@@ -41,6 +41,10 @@ fix-lint:
 		fi; \
 	fi
 
+go-fix:
+	@echo "Running go fix..."
+	@go fix ./...
+
 clean:
 	@echo "Cleaning..."
 	@rm -f main

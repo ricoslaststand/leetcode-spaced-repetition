@@ -86,7 +86,7 @@ func (r ProblemPostgresRepository) GetProblems(ctx context.Context, topics, diff
 
 	query := `SELECT id, title, slug, difficulty FROM problems`
 	var conditions []string
-	var args []interface{}
+	var args []any
 	argIdx := 1
 
 	if len(topics) > 0 {

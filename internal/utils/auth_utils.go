@@ -19,7 +19,7 @@ func GenerateToken(email string) (string, error) {
 }
 
 func ValidateToken(tokenString string) (*jwt.Token, error) {
-	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	return jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return jwtKey, nil
 	})
 }
