@@ -1,7 +1,7 @@
 services:
   db:
     container_name: leetcode-buddy-postgres
-    image: postgres
+    image: postgres:18-alpine
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -9,7 +9,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     networks:
       - app-network
  
@@ -54,15 +54,15 @@ services:
       - app-network
     restart: always
 
-  db-seeding:
-    build:
-      dockerfile: Dockerfile.data-seeding
-      context: ./
-    depends_on:
-      - db
-    networks:
-      - app-network
-    restart: "no"
+  # db-seeding:
+  #   build:
+  #     dockerfile: Dockerfile.data-seeding
+  #     context: ./
+  #   depends_on:
+  #     - db
+  #   networks:
+  #     - app-network
+  #   restart: "no"
  
 networks:
   app-network:
