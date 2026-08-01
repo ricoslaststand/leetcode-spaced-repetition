@@ -12,6 +12,19 @@ export default defineConfig({
   ],
   server: {
     host: true,
+    // Stands in for Traefik in local development: serves the API under the same origin at
+    // /api, strips the prefix, and sets the Remote-User header that Authelia's ForwardAuth
+    // adds in production. Keeps dev and prod on the same request shape.
+    proxy: {
+      "/api": {
+        target: process.env.VITE_DEV_API_TARGET ?? "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api/, ""),
+        headers: {
+          "Remote-User": process.env.VITE_DEV_OWNER_USERNAME ?? "dev-owner",
+        },
+      },
+    },
   },
   resolve: {
     alias: {

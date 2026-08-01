@@ -1,73 +1,134 @@
 basePath: /
 definitions:
-  controllers.loginRequestBody:
-    type: object
-  controllers.saveQuestionSubmissionRequest:
+  controllers.saveProblemSubmissionRequest:
     properties:
       confidenceLevel:
-        maximum: 5
-        minimum: 1
-        type: integer
-      questionId:
+        type: string
+      language:
+        type: string
+      problemId:
         minimum: 1
         type: integer
       timeTaken:
-        minimum: 0
         type: integer
     required:
     - confidenceLevel
-    - questionId
-    - timeTaken
+    - problemId
     type: object
   models.ConfidenceLevel:
     enum:
-    - 1
-    - 2
-    - 3
-    - 4
-    type: integer
+    - again
+    - hard
+    - good
+    - easy
+    type: string
     x-enum-varnames:
-    - VeryLowConfidence
-    - LowConfidence
-    - MediumConfidence
-    - HighConfidence
-  models.Question:
+    - AgainConfidence
+    - HardConfidence
+    - GoodConfidence
+    - EasyConfidence
+  models.DashboardData:
+    properties:
+      due:
+        items:
+          $ref: '#/definitions/models.ProblemReviewItem'
+        type: array
+      lowStability:
+        items:
+          $ref: '#/definitions/models.ProblemReviewItem'
+        type: array
+      overdueCount:
+        type: integer
+    type: object
+  models.ImportSubmissionRowError:
+    properties:
+      reason:
+        type: string
+      row:
+        type: integer
+    type: object
+  models.ImportSubmissionsResult:
+    properties:
+      errors:
+        items:
+          $ref: '#/definitions/models.ImportSubmissionRowError'
+        type: array
+      imported:
+        type: integer
+      skipped:
+        type: integer
+    type: object
+  models.Problem:
     properties:
       description:
         type: string
       difficulty:
-        $ref: '#/definitions/models.QuestionDifficulty'
+        $ref: '#/definitions/models.ProblemDifficulty'
       id:
         type: integer
       slug:
         type: string
-      tags:
+      title:
+        type: string
+      topics:
         items:
           type: string
         type: array
+    type: object
+  models.ProblemDetail:
+    properties:
+      description:
+        type: string
+      difficulty:
+        $ref: '#/definitions/models.ProblemDifficulty'
+      id:
+        type: integer
+      slug:
+        type: string
+      stability:
+        type: number
       title:
         type: string
+      topics:
+        items:
+          type: string
+        type: array
     type: object
-  models.QuestionDifficulty:
+  models.ProblemDifficulty:
     enum:
-    - 1
-    - 2
-    - 3
-    type: integer
+    - easy
+    - medium
+    - hard
+    type: string
     x-enum-varnames:
     - EasyDifficulty
     - MediumDifficulty
     - HardDifficulty
-  models.QuestionPage:
+  models.ProblemPage:
     properties:
       data:
         items:
-          $ref: '#/definitions/models.Question'
+          $ref: '#/definitions/models.Problem'
         type: array
     required:
     - data
     type: object
-  models.QuestionSubmission:
+  models.ProblemReviewItem:
+    properties:
+      difficulty:
+        $ref: '#/definitions/models.ProblemDifficulty'
+      due:
+        type: string
+      problemId:
+        type: integer
+      slug:
+        type: string
+      stability:
+        type: number
+      title:
+        type: string
+    type: object
+  models.ProblemSubmission:
     properties:
       confidenceLevel:
         $ref: '#/definitions/models.ConfidenceLevel'
@@ -75,32 +136,34 @@ definitions:
         type: string
       id:
         type: string
-      questionId:
+      language:
+        $ref: '#/definitions/models.SubmissionLanguage'
+      problemId:
         type: integer
       timeTaken:
         type: integer
     type: object
-  models.QuestionSubmissionPage:
+  models.ProblemSubmissionPage:
     properties:
       data:
         items:
-          $ref: '#/definitions/models.QuestionSubmission'
+          $ref: '#/definitions/models.ProblemSubmission'
         type: array
     required:
     - data
     type: object
-  models.QuestionSubmissionWithDetails:
+  models.ProblemSubmissionWithDetails:
     properties:
       confidenceLevel:
-        type: integer
+        $ref: '#/definitions/models.ConfidenceLevel'
       id:
         type: string
-      question:
+      problem:
         properties:
           description:
             type: string
           difficulty:
-            $ref: '#/definitions/models.QuestionDifficulty'
+            $ref: '#/definitions/models.ProblemDifficulty'
           id:
             type: integer
           title:
@@ -111,15 +174,57 @@ definitions:
       timeTaken:
         type: integer
     type: object
-  models.QuestionSubmissionWithDetailsPage:
+  models.ProblemSubmissionWithDetailsPage:
     properties:
       data:
         items:
-          $ref: '#/definitions/models.QuestionSubmissionWithDetails'
+          $ref: '#/definitions/models.ProblemSubmissionWithDetails'
         type: array
     required:
     - data
     type: object
+  models.SubmissionLanguage:
+    enum:
+    - cpp
+    - java
+    - python
+    - python3
+    - c
+    - csharp
+    - javascript
+    - typescript
+    - php
+    - swift
+    - kotlin
+    - dart
+    - golang
+    - ruby
+    - scala
+    - rust
+    - racket
+    - erlang
+    - elixir
+    type: string
+    x-enum-varnames:
+    - LangCPP
+    - LangJava
+    - LangPython
+    - LangPython3
+    - LangC
+    - LangCSharp
+    - LangJavaScript
+    - LangTypeScript
+    - LangPHP
+    - LangSwift
+    - LangKotlin
+    - LangDart
+    - LangGolang
+    - LangRuby
+    - LangScala
+    - LangRust
+    - LangRacket
+    - LangErlang
+    - LangElixir
 host: localhost:8000
 info:
   contact: {}
@@ -127,35 +232,24 @@ info:
   title: Leetcode Buddy API
   version: "1.0"
 paths:
-  /auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Validates credentials and returns an authentication token
+  /dashboard:
+    get:
+      description: Returns problems due for review and problems with the lowest FSRS
+        stability
       parameters:
-      - description: Login credentials
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/controllers.loginRequestBody'
+      - description: Number of items per table (1–50, default 10)
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/models.DashboardData'
         "400":
           description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
           schema:
             additionalProperties:
               type: string
@@ -166,20 +260,20 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: User login
+      summary: Dashboard summary
       tags:
-      - auth
-  /questions:
+      - dashboard
+  /problems:
     get:
-      description: Returns a paginated list of Leetcode questions, optionally filtered
-        by tags
+      description: Returns a paginated list of Leetcode problems, optionally filtered
+        by topics
       parameters:
       - collectionFormat: csv
-        description: Filter by tag names
+        description: Filter by topic names
         in: query
         items:
           type: string
-        name: tags
+        name: topics
         type: array
       produces:
       - application/json
@@ -187,21 +281,21 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.QuestionPage'
+            $ref: '#/definitions/models.ProblemPage'
         "500":
           description: Internal Server Error
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: List questions
+      summary: List problems
       tags:
-      - questions
-  /questions/{id}:
+      - problems
+  /problems/{id}:
     get:
-      description: Returns a single question including its tags
+      description: Returns a single problem including its topics
       parameters:
-      - description: Question ID
+      - description: Problem ID
         in: path
         name: id
         required: true
@@ -212,7 +306,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Question'
+            $ref: '#/definitions/models.ProblemDetail'
         "400":
           description: Bad Request
           schema:
@@ -231,14 +325,14 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Get a question by ID
+      summary: Get a problem by ID
       tags:
-      - questions
-  /questions/{id}/submissions:
+      - problems
+  /problems/{id}/submissions:
     get:
-      description: Returns all submissions for the question identified by id
+      description: Returns all submissions for the problem identified by id
       parameters:
-      - description: Question ID
+      - description: Problem ID
         in: path
         name: id
         required: true
@@ -249,7 +343,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.QuestionSubmissionPage'
+            $ref: '#/definitions/models.ProblemSubmissionPage'
         "400":
           description: Bad Request
           schema:
@@ -262,20 +356,20 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Get submissions for a question
+      summary: Get submissions for a problem
       tags:
-      - questions
-  /questions/submissions:
+      - problems
+  /problems/submissions:
     get:
-      description: Returns submissions across all questions, optionally filtered by
-        question IDs
+      description: Returns submissions across all problems, optionally filtered by
+        problem IDs
       parameters:
       - collectionFormat: csv
-        description: Filter by question IDs
+        description: Filter by problem IDs
         in: query
         items:
           type: integer
-        name: questionId
+        name: problemId
         type: array
       produces:
       - application/json
@@ -283,7 +377,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.QuestionSubmissionWithDetailsPage'
+            $ref: '#/definitions/models.ProblemSubmissionWithDetailsPage'
         "400":
           description: Bad Request
           schema:
@@ -302,14 +396,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: Saves a new attempt for a Leetcode question
+      description: Saves a new attempt for a Leetcode problem
       parameters:
       - description: Submission details
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/controllers.saveQuestionSubmissionRequest'
+          $ref: '#/definitions/controllers.saveProblemSubmissionRequest'
       produces:
       - application/json
       responses:
@@ -334,9 +428,44 @@ paths:
       summary: Record a new submission
       tags:
       - submissions
-  /questions/tags:
+  /problems/submissions/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Accepts a multipart/form-data .xlsx file and bulk-imports problem
+        submissions. Each row must have columns: "Problem #", "Date" (YYYY-MM-DD),
+        "Confidence" (1-4), "Language" (python only).'
+      parameters:
+      - description: Excel file (.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ImportSubmissionsResult'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Import submissions from Excel
+      tags:
+      - submissions
+  /problems/topics:
     get:
-      description: Returns every tag that exists across all questions
+      description: Returns every topic that exists across all problems
       produces:
       - application/json
       responses:
@@ -354,7 +483,7 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: List all question tags
+      summary: List all problem topics
       tags:
-      - questions
+      - problems
 swagger: "2.0"

@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"time"
 
+	"leetcode-spaced-repetition/internal/utils"
 	"leetcode-spaced-repetition/models"
 	"leetcode-spaced-repetition/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +48,10 @@ type ProblemsController struct {
 	logger          *zap.Logger
 }
 
-func RegisterRoutes(r *gin.Engine, problemsService *services.ProblemService, logger *zap.Logger) {
+// RegisterRoutes wires up the API. authMiddleware guards every route that reads or writes
+// user-scoped data; it is passed in rather than constructed here so tests can substitute a
+// stub identity. /ping is deliberately left unguarded for container healthchecks.
+func RegisterRoutes(r *gin.Engine, problemsService *services.ProblemService, authMiddleware gin.HandlerFunc, logger *zap.Logger) {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		if err := v.RegisterValidation("date", validDate); err != nil {
 			panic("failed to register date validator: " + err.Error())
@@ -57,9 +60,9 @@ func RegisterRoutes(r *gin.Engine, problemsService *services.ProblemService, log
 
 	problemsController := ProblemsController{problemsService: *problemsService, logger: logger}
 
-	r.GET("/dashboard", problemsController.GetDashboard)
+	r.GET("/dashboard", authMiddleware, problemsController.GetDashboard)
 
-	problemsGroup := r.Group("/problems")
+	problemsGroup := r.Group("/problems", authMiddleware)
 	problemsGroup.GET("", problemsController.getProblems)
 	problemsGroup.GET("topics", problemsController.GetAllProblemTopics)
 	problemsGroup.GET("submissions", problemsController.getAllProblemSubmissions)
@@ -151,7 +154,13 @@ func (c ProblemsController) GetProblemByID(context *gin.Context) {
 	}
 	problem.Topics = topics
 
-	userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
+	userID, ok := utils.UserIDFromContext(context)
+	if !ok {
+		c.logger.Error("no authenticated user on a guarded route")
+		utils.FormatErrorBody(context, http.StatusInternalServerError, "An internal server error has occurred.")
+		return
+	}
+
 	cardState, err := c.problemsService.GetProblemCardState(context, userID, problemID)
 	if err != nil {
 		c.logger.Error("failed to get card state for problem", zap.Int("problemID", problemID), zap.Error(err))
@@ -255,6 +264,13 @@ func (c ProblemsController) SaveProblemSubmission(context *gin.Context) {
 		return
 	}
 
+	userID, ok := utils.UserIDFromContext(context)
+	if !ok {
+		c.logger.Error("no authenticated user on a guarded route")
+		utils.FormatErrorBody(context, http.StatusInternalServerError, "An internal error has occurred.")
+		return
+	}
+
 	var timeTaken *time.Duration
 	if problemSubmissionRequest.TimeTaken != nil {
 		d := time.Duration(*problemSubmissionRequest.TimeTaken) * time.Second
@@ -270,7 +286,7 @@ func (c ProblemsController) SaveProblemSubmission(context *gin.Context) {
 	if err := c.problemsService.SaveProblemSubmission(
 		context,
 		problemSubmissionRequest.ProblemID,
-		uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
+		userID,
 		time.Now(),
 		timeTaken,
 		models.ConfidenceLevel(problemSubmissionRequest.ConfidenceLevel),
@@ -300,6 +316,13 @@ func (c ProblemsController) SaveProblemSubmission(context *gin.Context) {
 // @Failure      500   {object}  map[string]string
 // @Router       /problems/submissions/import [post]
 func (c ProblemsController) ImportSubmissions(ctx *gin.Context) {
+	userID, ok := utils.UserIDFromContext(ctx)
+	if !ok {
+		c.logger.Error("no authenticated user on a guarded route")
+		utils.FormatErrorBody(ctx, http.StatusInternalServerError, "An internal server error has occurred.")
+		return
+	}
+
 	fileHeader, err := ctx.FormFile("file")
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -318,7 +341,7 @@ func (c ProblemsController) ImportSubmissions(ctx *gin.Context) {
 	}
 	defer func() { _ = f.Close() }()
 
-	result, err := c.problemsService.ImportSubmissions(ctx, f)
+	result, err := c.problemsService.ImportSubmissions(ctx, userID, f)
 	if err != nil {
 		c.logger.Error("failed to import submissions", zap.Error(err))
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -341,7 +364,12 @@ func (c ProblemsController) ImportSubmissions(ctx *gin.Context) {
 // @Failure      500  {object}  map[string]string
 // @Router       /dashboard [get]
 func (c ProblemsController) GetDashboard(ctx *gin.Context) {
-	userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
+	userID, ok := utils.UserIDFromContext(ctx)
+	if !ok {
+		c.logger.Error("no authenticated user on a guarded route")
+		utils.FormatErrorBody(ctx, http.StatusInternalServerError, "An internal server error has occurred.")
+		return
+	}
 
 	limitStr := ctx.DefaultQuery("limit", "10")
 	limit, err := strconv.Atoi(limitStr)

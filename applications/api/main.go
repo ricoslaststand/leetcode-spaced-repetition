@@ -48,8 +48,17 @@ func main() {
 	problemsService := services.NewProblemsService(problemsRepo, cardStateRepo, logger)
 
 	router := gin.Default()
-	router.Use(cors.Default()) // All origins allowed by default
-	logger.Info("CORS is enabled")
+
+	// In production the SPA and the API are served from a single origin behind Traefik, so
+	// no CORS headers are needed. Only the Vite dev server talks cross-origin.
+	if cfg.IsDevelopment() {
+		corsConfig := cors.DefaultConfig()
+		corsConfig.AllowOrigins = []string{"http://localhost:5173"}
+		corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, internal.RemoteUserHeader)
+		router.Use(cors.New(corsConfig))
+		logger.Info("CORS enabled for local development")
+	}
+
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
@@ -63,7 +72,8 @@ func main() {
 	})
 	p.Use(router)
 
-	controllers.RegisterRoutes(router, problemsService, logger)
+	authMiddleware := internal.OwnerOnlyAuthMiddleware(cfg.OwnerUsername, cfg.OwnerUserID)
+	controllers.RegisterRoutes(router, problemsService, authMiddleware, logger)
 
 	// TODO: Turn this into a configurable port
 	logger.Info("starting API server", zap.String("port", ":8000"))

@@ -5,10 +5,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	goose "github.com/pressly/goose/v3"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/xuri/excelize/v2"
@@ -23,10 +25,28 @@ import (
 	"go.uber.org/zap"
 )
 
+const testOwnerUsername = "test-owner"
+
+var testOwnerUserID = uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
+
 var (
-	testDB     *sql.DB
-	testRouter *gin.Engine
+	testDB *sql.DB
+	// testRouter stamps the Remote-User header before delegating, so tests exercise the
+	// real auth middleware without every call site constructing the header itself.
+	testRouter http.Handler
+	// rawRouter is the same router without the header injection, for tests that assert on
+	// authentication behaviour itself.
+	rawRouter *gin.Engine
 )
+
+// authInjector sets the header that the authenticating reverse proxy (Authelia via Traefik
+// ForwardAuth) puts on every request it forwards.
+type authInjector struct{ inner http.Handler }
+
+func (a authInjector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r.Header.Set(internal.RemoteUserHeader, testOwnerUsername)
+	a.inner.ServeHTTP(w, r)
+}
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
@@ -75,8 +95,10 @@ func TestMain(m *testing.M) {
 	cardStateRepo := repositories.NewProblemCardStatePostgresRepository(testDB, logger)
 	problemsService := services.NewProblemsService(problemsRepo, cardStateRepo, logger)
 
-	testRouter = gin.New()
-	controllers.RegisterRoutes(testRouter, problemsService, logger)
+	rawRouter = gin.New()
+	authMiddleware := internal.OwnerOnlyAuthMiddleware(testOwnerUsername, testOwnerUserID)
+	controllers.RegisterRoutes(rawRouter, problemsService, authMiddleware, logger)
+	testRouter = authInjector{inner: rawRouter}
 
 	os.Exit(m.Run())
 }

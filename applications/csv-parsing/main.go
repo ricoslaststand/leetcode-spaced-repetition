@@ -14,7 +14,6 @@ import (
 	"leetcode-spaced-repetition/repositories"
 	"leetcode-spaced-repetition/services"
 
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -81,9 +80,7 @@ func main() {
 			continue
 		}
 
-		userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
-
-		if err = problemsService.SaveProblemSubmission(c, submission.problemNumber, userID, submission.submissionDate, submission.timeTaken, submission.confidenceLevel, nil); err != nil {
+		if err = problemsService.SaveProblemSubmission(c, submission.problemNumber, cfg.OwnerUserID, submission.submissionDate, submission.timeTaken, submission.confidenceLevel, nil); err != nil {
 			logger.Error("failed to save problem submission", zap.Int("problemNumber", submission.problemNumber), zap.Error(err))
 		} else {
 			logger.Info("saved problem submission", zap.Int("problemNumber", submission.problemNumber))

@@ -1,15 +1,17 @@
 # Stage 1: Build
 FROM node:25.6.1-alpine3.23 AS builder
 
+RUN corepack enable
+
 WORKDIR /app
 
-COPY package*.json .
+COPY package.json pnpm-lock.yaml ./
 
-RUN npm install
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN npm run build
+RUN pnpm run build
 
 # Stage 2: Serve
 FROM node:25.6.1-alpine3.23

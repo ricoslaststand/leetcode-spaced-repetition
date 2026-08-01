@@ -15,38 +15,29 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth/login": {
-            "post": {
-                "description": "Validates credentials and returns an authentication token",
-                "consumes": [
-                    "application/json"
-                ],
+        "/dashboard": {
+            "get": {
+                "description": "Returns problems due for review and problems with the lowest FSRS stability",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "auth"
+                    "dashboard"
                 ],
-                "summary": "User login",
+                "summary": "Dashboard summary",
                 "parameters": [
                     {
-                        "description": "Login credentials",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controllers.loginRequestBody"
-                        }
+                        "type": "integer",
+                        "description": "Number of items per table (1–50, default 10)",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/models.DashboardData"
                         }
                     },
                     "400": {
@@ -58,15 +49,6 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -79,16 +61,16 @@ const docTemplate = `{
                 }
             }
         },
-        "/questions": {
+        "/problems": {
             "get": {
-                "description": "Returns a paginated list of Leetcode questions, optionally filtered by tags",
+                "description": "Returns a paginated list of Leetcode problems, optionally filtered by topics",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "questions"
+                    "problems"
                 ],
-                "summary": "List questions",
+                "summary": "List problems",
                 "parameters": [
                     {
                         "type": "array",
@@ -96,8 +78,8 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "Filter by tag names",
-                        "name": "tags",
+                        "description": "Filter by topic names",
+                        "name": "topics",
                         "in": "query"
                     }
                 ],
@@ -105,7 +87,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.QuestionPage"
+                            "$ref": "#/definitions/models.ProblemPage"
                         }
                     },
                     "500": {
@@ -120,9 +102,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/questions/submissions": {
+        "/problems/submissions": {
             "get": {
-                "description": "Returns submissions across all questions, optionally filtered by question IDs",
+                "description": "Returns submissions across all problems, optionally filtered by problem IDs",
                 "produces": [
                     "application/json"
                 ],
@@ -137,8 +119,8 @@ const docTemplate = `{
                             "type": "integer"
                         },
                         "collectionFormat": "csv",
-                        "description": "Filter by question IDs",
-                        "name": "questionId",
+                        "description": "Filter by problem IDs",
+                        "name": "problemId",
                         "in": "query"
                     }
                 ],
@@ -146,7 +128,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.QuestionSubmissionWithDetailsPage"
+                            "$ref": "#/definitions/models.ProblemSubmissionWithDetailsPage"
                         }
                     },
                     "400": {
@@ -170,7 +152,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Saves a new attempt for a Leetcode question",
+                "description": "Saves a new attempt for a Leetcode problem",
                 "consumes": [
                     "application/json"
                 ],
@@ -188,7 +170,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controllers.saveQuestionSubmissionRequest"
+                            "$ref": "#/definitions/controllers.saveProblemSubmissionRequest"
                         }
                     }
                 ],
@@ -223,16 +205,66 @@ const docTemplate = `{
                 }
             }
         },
-        "/questions/tags": {
-            "get": {
-                "description": "Returns every tag that exists across all questions",
+        "/problems/submissions/import": {
+            "post": {
+                "description": "Accepts a multipart/form-data .xlsx file and bulk-imports problem submissions. Each row must have columns: \"Problem #\", \"Date\" (YYYY-MM-DD), \"Confidence\" (1-4), \"Language\" (python only).",
+                "consumes": [
+                    "multipart/form-data"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "questions"
+                    "submissions"
                 ],
-                "summary": "List all question tags",
+                "summary": "Import submissions from Excel",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel file (.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ImportSubmissionsResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/problems/topics": {
+            "get": {
+                "description": "Returns every topic that exists across all problems",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "problems"
+                ],
+                "summary": "List all problem topics",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -258,20 +290,20 @@ const docTemplate = `{
                 }
             }
         },
-        "/questions/{id}": {
+        "/problems/{id}": {
             "get": {
-                "description": "Returns a single question including its tags",
+                "description": "Returns a single problem including its topics",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "questions"
+                    "problems"
                 ],
-                "summary": "Get a question by ID",
+                "summary": "Get a problem by ID",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Question ID",
+                        "description": "Problem ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -281,7 +313,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Question"
+                            "$ref": "#/definitions/models.ProblemDetail"
                         }
                     },
                     "400": {
@@ -314,20 +346,20 @@ const docTemplate = `{
                 }
             }
         },
-        "/questions/{id}/submissions": {
+        "/problems/{id}/submissions": {
             "get": {
-                "description": "Returns all submissions for the question identified by id",
+                "description": "Returns all submissions for the problem identified by id",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "questions"
+                    "problems"
                 ],
-                "summary": "Get submissions for a question",
+                "summary": "Get submissions for a problem",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Question ID",
+                        "description": "Problem ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -337,7 +369,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.QuestionSubmissionPage"
+                            "$ref": "#/definitions/models.ProblemSubmissionPage"
                         }
                     },
                     "400": {
@@ -363,55 +395,99 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "controllers.loginRequestBody": {
-            "type": "object"
-        },
-        "controllers.saveQuestionSubmissionRequest": {
+        "controllers.saveProblemSubmissionRequest": {
             "type": "object",
             "required": [
                 "confidenceLevel",
-                "questionId",
-                "timeTaken"
+                "problemId"
             ],
             "properties": {
                 "confidenceLevel": {
-                    "type": "integer",
-                    "maximum": 5,
-                    "minimum": 1
+                    "type": "string"
                 },
-                "questionId": {
+                "language": {
+                    "type": "string"
+                },
+                "problemId": {
                     "type": "integer",
                     "minimum": 1
                 },
                 "timeTaken": {
-                    "type": "integer",
-                    "minimum": 0
+                    "type": "integer"
                 }
             }
         },
         "models.ConfidenceLevel": {
-            "type": "integer",
+            "type": "string",
             "enum": [
-                1,
-                2,
-                3,
-                4
+                "again",
+                "hard",
+                "good",
+                "easy"
             ],
             "x-enum-varnames": [
-                "VeryLowConfidence",
-                "LowConfidence",
-                "MediumConfidence",
-                "HighConfidence"
+                "AgainConfidence",
+                "HardConfidence",
+                "GoodConfidence",
+                "EasyConfidence"
             ]
         },
-        "models.Question": {
+        "models.DashboardData": {
+            "type": "object",
+            "properties": {
+                "due": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ProblemReviewItem"
+                    }
+                },
+                "lowStability": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ProblemReviewItem"
+                    }
+                },
+                "overdueCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.ImportSubmissionRowError": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                },
+                "row": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.ImportSubmissionsResult": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ImportSubmissionRowError"
+                    }
+                },
+                "imported": {
+                    "type": "integer"
+                },
+                "skipped": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Problem": {
             "type": "object",
             "properties": {
                 "description": {
                     "type": "string"
                 },
                 "difficulty": {
-                    "$ref": "#/definitions/models.QuestionDifficulty"
+                    "$ref": "#/definitions/models.ProblemDifficulty"
                 },
                 "id": {
                     "type": "integer"
@@ -419,23 +495,52 @@ const docTemplate = `{
                 "slug": {
                     "type": "string"
                 },
-                "tags": {
+                "title": {
+                    "type": "string"
+                },
+                "topics": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
-                },
-                "title": {
-                    "type": "string"
                 }
             }
         },
-        "models.QuestionDifficulty": {
-            "type": "integer",
+        "models.ProblemDetail": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "difficulty": {
+                    "$ref": "#/definitions/models.ProblemDifficulty"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "stability": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "topics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.ProblemDifficulty": {
+            "type": "string",
             "enum": [
-                1,
-                2,
-                3
+                "easy",
+                "medium",
+                "hard"
             ],
             "x-enum-varnames": [
                 "EasyDifficulty",
@@ -443,7 +548,7 @@ const docTemplate = `{
                 "HardDifficulty"
             ]
         },
-        "models.QuestionPage": {
+        "models.ProblemPage": {
             "type": "object",
             "required": [
                 "data"
@@ -452,12 +557,35 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.Question"
+                        "$ref": "#/definitions/models.Problem"
                     }
                 }
             }
         },
-        "models.QuestionSubmission": {
+        "models.ProblemReviewItem": {
+            "type": "object",
+            "properties": {
+                "difficulty": {
+                    "$ref": "#/definitions/models.ProblemDifficulty"
+                },
+                "due": {
+                    "type": "string"
+                },
+                "problemId": {
+                    "type": "integer"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "stability": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ProblemSubmission": {
             "type": "object",
             "properties": {
                 "confidenceLevel": {
@@ -469,7 +597,10 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "questionId": {
+                "language": {
+                    "$ref": "#/definitions/models.SubmissionLanguage"
+                },
+                "problemId": {
                     "type": "integer"
                 },
                 "timeTaken": {
@@ -477,7 +608,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.QuestionSubmissionPage": {
+        "models.ProblemSubmissionPage": {
             "type": "object",
             "required": [
                 "data"
@@ -486,28 +617,28 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.QuestionSubmission"
+                        "$ref": "#/definitions/models.ProblemSubmission"
                     }
                 }
             }
         },
-        "models.QuestionSubmissionWithDetails": {
+        "models.ProblemSubmissionWithDetails": {
             "type": "object",
             "properties": {
                 "confidenceLevel": {
-                    "type": "integer"
+                    "$ref": "#/definitions/models.ConfidenceLevel"
                 },
                 "id": {
                     "type": "string"
                 },
-                "question": {
+                "problem": {
                     "type": "object",
                     "properties": {
                         "description": {
                             "type": "string"
                         },
                         "difficulty": {
-                            "$ref": "#/definitions/models.QuestionDifficulty"
+                            "$ref": "#/definitions/models.ProblemDifficulty"
                         },
                         "id": {
                             "type": "integer"
@@ -525,7 +656,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.QuestionSubmissionWithDetailsPage": {
+        "models.ProblemSubmissionWithDetailsPage": {
             "type": "object",
             "required": [
                 "data"
@@ -534,10 +665,55 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.QuestionSubmissionWithDetails"
+                        "$ref": "#/definitions/models.ProblemSubmissionWithDetails"
                     }
                 }
             }
+        },
+        "models.SubmissionLanguage": {
+            "type": "string",
+            "enum": [
+                "cpp",
+                "java",
+                "python",
+                "python3",
+                "c",
+                "csharp",
+                "javascript",
+                "typescript",
+                "php",
+                "swift",
+                "kotlin",
+                "dart",
+                "golang",
+                "ruby",
+                "scala",
+                "rust",
+                "racket",
+                "erlang",
+                "elixir"
+            ],
+            "x-enum-varnames": [
+                "LangCPP",
+                "LangJava",
+                "LangPython",
+                "LangPython3",
+                "LangC",
+                "LangCSharp",
+                "LangJavaScript",
+                "LangTypeScript",
+                "LangPHP",
+                "LangSwift",
+                "LangKotlin",
+                "LangDart",
+                "LangGolang",
+                "LangRuby",
+                "LangScala",
+                "LangRust",
+                "LangRacket",
+                "LangErlang",
+                "LangElixir"
+            ]
         }
     }
 }`

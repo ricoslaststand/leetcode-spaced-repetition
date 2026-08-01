@@ -131,7 +131,7 @@ type parsedSubmissionRow struct {
 	problemID       int
 }
 
-func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (models.ImportSubmissionsResult, error) {
+func (s ProblemService) ImportSubmissions(ctx context.Context, userID uuid.UUID, r io.Reader) (models.ImportSubmissionsResult, error) {
 	result := models.ImportSubmissionsResult{
 		Errors: make([]models.ImportSubmissionRowError, 0),
 	}
@@ -249,8 +249,6 @@ func (s ProblemService) ImportSubmissions(ctx context.Context, r io.Reader) (mod
 	})
 
 	// Phase 3: Save submissions and compute FSRS card states.
-	userID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
-
 	for _, row := range validRows {
 		inserted, err := s.problemRepo.SaveProblemSubmission(ctx, row.problemID, userID, row.submissionDate, row.timeTaken, row.confidenceLevel, nil)
 		if err != nil {

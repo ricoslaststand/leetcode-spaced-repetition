@@ -2,41 +2,38 @@ package internal
 
 import (
 	"net/http"
-	"strings"
 
 	"leetcode-spaced-repetition/internal/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+// RemoteUserHeader is set by the authenticating reverse proxy (Authelia, via Traefik's
+// ForwardAuth middleware) on every request it has already authenticated.
+const RemoteUserHeader = "Remote-User"
+
+// OwnerOnlyAuthMiddleware accepts requests the reverse proxy has authenticated as the single
+// owner of this deployment and rejects everything else.
+//
+// Traefik's ForwardAuth middleware is the real gate — the API must not be reachable except
+// through it. This check is defence in depth: if the middleware is ever detached, or the API
+// port is published by mistake, requests arrive without a Remote-User header and are refused
+// rather than silently served as the owner.
+func OwnerOnlyAuthMiddleware(ownerUsername string, ownerUserID uuid.UUID) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
+		remoteUser := c.GetHeader(RemoteUserHeader)
 
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing or malformed"})
+		// The empty check is deliberate and not redundant: if ownerUsername were ever
+		// misconfigured to "", a request with no Remote-User header would compare equal
+		// and this middleware would fail open.
+		if remoteUser == "" || ownerUsername == "" || remoteUser != ownerUsername {
+			utils.FormatErrorBody(c, http.StatusUnauthorized, "Unauthorized")
 			c.Abort()
 			return
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		token, err := utils.ValidateToken(tokenString)
-
-		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-			c.Abort()
-			return
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
-			c.Abort()
-			return
-		}
-		c.Set("user", claims["username"])
+		c.Set(utils.UserIDContextKey, ownerUserID)
 		c.Next()
-
 	}
 }

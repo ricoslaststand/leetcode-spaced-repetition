@@ -2,9 +2,13 @@ import axios from 'axios';
 import qs from 'qs';
 import type { DashboardData } from './models/Problem';
 
+// In production the SPA and the API sit behind one Traefik host, so a relative path keeps
+// requests same-origin and lets the ForwardAuth session cookie ride along. The Vite dev
+// server sets VITE_API_BASE_URL to reach the API container directly.
 const instance = axios.create({
-    baseURL: "http://localhost:8000",
-    timeout: 5_000
+    baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api",
+    timeout: 5_000,
+    withCredentials: true
 })
 
 export const getAllProblemTopics = async () => {
