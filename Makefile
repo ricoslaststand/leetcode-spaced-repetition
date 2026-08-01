@@ -45,6 +45,22 @@ go-fix:
 	@echo "Running go fix..."
 	@go fix ./...
 
+align:
+	@if command -v betteralign > /dev/null; then \
+		echo "Running betteralign..."; \
+		betteralign -apply ./...; \
+	else \
+		read -p "betteralign is not installed on your machine. Do you want to install it? [Y/n] " choice; \
+		if [ "$$choice" != "n" ] && [ "$$choice" != "N" ]; then \
+			go install github.com/dkorunic/betteralign/cmd/betteralign@latest; \
+			echo "Installed betteralign"; \
+			betteralign -apply ./...; \
+		else \
+			echo "You chose not to install betteralign. Exiting..."; \
+			exit 1; \
+		fi; \
+	fi
+
 clean:
 	@echo "Cleaning..."
 	@rm -f main
